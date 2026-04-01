@@ -362,7 +362,8 @@ def chat(user_id: str, history: list, user_message: str) -> str:
     max_tokens = 2000 if (is_near_end or is_confirmed) else 600
 
     response = client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model="claude-haiku-4-5-20251001",
+        # model="claude-sonnet-4-20250514",
         max_tokens=max_tokens,
         system=SYSTEM_PROMPT,
         messages=messages,
