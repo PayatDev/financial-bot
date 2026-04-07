@@ -1,5 +1,5 @@
-# claude_service_v2.py
-# น้องแพลน v2 — เก็บข้อมูลสำหรับวางแผนมรดกและพินัยกรรม (พ่อแม่ที่ลูกยังไม่บรรลุนิติภาวะ)
+# claude_service.py
+# น้องแพลน — เก็บข้อมูลสำหรับวางแผนมรดกและพินัยกรรม (พ่อแม่ที่ลูกยังไม่บรรลุนิติภาวะ)
 
 import anthropic
 from config import ANTHROPIC_API_KEY
@@ -60,7 +60,7 @@ SYSTEM_PROMPT = """คุณคือ "น้องแพลน" ผู้ช่
 **Labeling**
 สะท้อนอารมณ์ที่ซ่อนอยู่
 "ฟังดูเหมือนเรื่องนี้ยังไม่ได้คุยกับใครเลยนะครับ"
-"ดูเหมือนส่วนนี้ยังไม่แน่ใจอยู่บ้าง"
+"ดูเหมือมส่วนนี้ยังไม่แน่ใจอยู่บ้าง"
 
 **And what else**
 หลังลูกค้าตอบ ถามต่อว่า "มีอะไรอื่นอีกมั้ยครับ?"
@@ -208,7 +208,7 @@ SYSTEM_PROMPT = """คุณคือ "น้องแพลน" ผู้ช่
 หรือบริษัทประกันชีวิตบางแห่งที่รับบริหารจัดการมรดก
 ข้อดีคือเป็นกลาง ไม่ลำเอียง และกันทายาทขัดแย้งกันได้
 ค่าตอบแทนกำหนดในพินัยกรรมให้จ่ายจากกองมรดกได้เลยครับ
-คุณวิดคิดว่าทิศทางนี้โอเคไหมครับ?"
+คุณคิดว่าทิศทางนี้โอเคไหมครับ?"
 
 **ผู้รับมอบอำนาจการเงิน (Financial POA)**
 "ถ้าวันหนึ่งทุพพลภาพแต่ยังมีชีวิตอยู่ ใครจะจัดการเรื่องเงินแทนครับ?"
@@ -312,7 +312,7 @@ CHECKLIST ก่อนจบ:
 [ ] ผู้คุมเงินมรดก + ตัวสำรอง
 [ ] ผู้จัดการมรดก
 [ ] Financial POA + Medical POA
-[ ] Staged Distribution
+[ ] Staged Distribution + Settlement Option
 [ ] I Love You Will risk
 [ ] Living Will (พร้อมตัวอย่างสถานการณ์)
 [ ] งานศพ + สวัสดิการ
@@ -337,13 +337,13 @@ CHECKLIST ก่อนจบ:
 ผู้ปกครอง ผู้คุมเงิน ผู้จัดการมรดก — ตามธรรมชาติ
 
 กลาง — ช่วงแผน:
-Staged Distribution → I Love You Will → Living Will → งานศพ → LTC
+Staged Distribution → Settlement Option → I Love You Will → Living Will → งานศพ → LTC
 
 ปิด:
 ขอ email → สรุปข้อมูลทั้งหมด
 → "ข้อมูลถูกต้องไหมครับ? ถ้าโอเคพิมพ์ ok ได้เลยครับ"
-→ รอ "ok" → "บันทึกเรียบร้อยแล้วครับ คุณพยัตจะติดต่อกลับเร็วๆ นี้นะครับ 😊"
-→ ส่ง [SAVE_DATA] พร้อม JSON
+→ รอ "ok" → "บันทึกเรียบร้อยแล้วครับ คุณพยัตจะทำบทสรุป คำแนะนำพร้อมร่างพินัยกรรมรวมถึงเอกสารที่เกี่ยวข้อง ส่งให้ตามอีเมลที่แจ้งไว้ เร็วๆ นี้นะครับ 😊"
+→ ส่ง [SAVE_DATA] พร้อม JSON (ลูกค้าไม่เห็น JSON)
 
 ---
 
@@ -405,10 +405,17 @@ def chat(user_id: str, history: list, user_message: str) -> str:
     is_confirmed = user_message.strip().lower() == "ok"
     max_tokens = 2000 if (is_near_end or is_confirmed) else 600
 
+    # Prompt caching — ประหยัด input tokens ~90% สำหรับ system prompt
     response = client.messages.create(
         model="claude-sonnet-4-20250514",
         max_tokens=max_tokens,
-        system=SYSTEM_PROMPT,
+        system=[
+            {
+                "type": "text",
+                "text": SYSTEM_PROMPT,
+                "cache_control": {"type": "ephemeral"}
+            }
+        ],
         messages=messages,
     )
     return response.content[0].text
