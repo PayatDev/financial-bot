@@ -1,5 +1,5 @@
 # sheets_service.py
-# บันทึกข้อมูลลูกค้าลง Google Sheets
+# บันทึกข้อมูลลูกค้าลง Google Sheets — น้องแพลน v2
 
 import os
 import json
@@ -13,67 +13,33 @@ SCOPES = [
     "https://www.googleapis.com/auth/drive",
 ]
 
-# Header columns ตาม JSON fields ของน้องแพลน v2
 HEADERS = [
-    "timestamp",
-    "line_user_id",
-    "nickname",
-    "age",
-    "gender",
-    "occupation",
-    "health",
-    "hobbies_and_risks",
-    "email",
-    "spouse_nickname",
-    "spouse_age",
-    "spouse_occupation",
-    "spouse_income",
-    "spouse_health",
-    "spouse_status",
-    "children",
-    "children_outside_marriage",
-    "assets_cash",
-    "assets_property",
-    "assets_investment",
-    "assets_insurance_savings",
-    "assets_digital",
-    "assets_business",
-    "assets_valuables",
-    "debt",
-    "guarantor",
-    "insurance_life",
-    "insurance_health",
-    "insurance_group",
-    "welfare",
-    "funeral_wishes",
-    "emergency_cash_90days",
-    "estate_admin_cost",
-    "asset_distribution",
-    "debt_responsibility",
-    "business_succession",
-    "staged_distribution",
-    "settlement_option",
-    "urgent_manager",
-    "estate_executor",
-    "financial_poa",
-    "living_will",
-    "surviving_spouse_plan",
-    "guardian_primary",
-    "guardian_backup",
-    "money_guardian_primary",
-    "money_guardian_backup",
-    "letter_to_children",
-    "gaps_for_payat",
-    "summary",
+    "timestamp", "line_user_id",
+    "nickname", "age", "gender", "occupation", "health",
+    "hobbies_and_risks", "email",
+    "spouse_nickname", "spouse_age", "spouse_occupation",
+    "spouse_income", "spouse_health", "spouse_status",
+    "children", "children_outside_marriage",
+    "assets_cash", "assets_property", "assets_investment",
+    "assets_crypto_wallet", "assets_insurance_savings",
+    "assets_digital", "assets_business", "assets_valuables",
+    "debt", "guarantor",
+    "insurance_life", "insurance_health",
+    "insurance_group", "welfare",
+    "funeral_wishes", "emergency_cash_90days", "estate_admin_cost",
+    "asset_distribution", "debt_responsibility", "business_succession",
+    "urgent_manager", "estate_executor", "financial_poa",
+    "living_will", "surviving_spouse_plan",
+    "guardian_primary", "guardian_backup",
+    "money_guardian_primary", "money_guardian_backup",
+    "letter_to_children", "gaps_for_payat", "summary",
 ]
 
 
 def get_sheet():
-    """เชื่อมต่อ Google Sheets"""
     creds_json = os.environ.get("GOOGLE_CREDENTIALS_JSON")
     if not creds_json:
         raise ValueError("GOOGLE_CREDENTIALS_JSON not found in environment")
-
     creds_dict = json.loads(creds_json)
     creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
     client = gspread.authorize(creds)
@@ -82,9 +48,9 @@ def get_sheet():
 
 
 def ensure_headers(sheet):
-    """ตรวจสอบว่ามี header row แล้วหรือยัง ถ้าไม่มีให้สร้าง"""
     first_row = sheet.row_values(1)
     if not first_row or first_row[0] != "timestamp":
+        sheet.clear()
         sheet.insert_row(HEADERS, index=1)
         sheet.format("1:1", {
             "textFormat": {"bold": True},
@@ -93,7 +59,6 @@ def ensure_headers(sheet):
 
 
 def save_to_sheets(line_user_id: str, data: dict):
-    """บันทึกข้อมูลลูกค้าลง Google Sheets"""
     try:
         sheet = get_sheet()
         ensure_headers(sheet)
@@ -119,6 +84,7 @@ def save_to_sheets(line_user_id: str, data: dict):
             data.get("assets_cash", ""),
             data.get("assets_property", ""),
             data.get("assets_investment", ""),
+            data.get("assets_crypto_wallet", ""),
             data.get("assets_insurance_savings", ""),
             data.get("assets_digital", ""),
             data.get("assets_business", ""),
@@ -135,8 +101,6 @@ def save_to_sheets(line_user_id: str, data: dict):
             data.get("asset_distribution", ""),
             data.get("debt_responsibility", ""),
             data.get("business_succession", ""),
-            data.get("staged_distribution", ""),
-            data.get("settlement_option", ""),
             data.get("urgent_manager", ""),
             data.get("estate_executor", ""),
             data.get("financial_poa", ""),
