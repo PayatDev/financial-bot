@@ -31,8 +31,8 @@ COMPLETED_USERS = set()
 CONTACT_MESSAGE = (
     "น้องแพลนมีหน้าที่เก็บข้อมูลเพียงอย่างเดียวครับ\n"
     "หากมีอะไรสอบถามเพิ่มเติม ติดต่อคุณพยัตได้เลยนะครับ 😊\n\n"
-    "📧 Email: payat@example.com\n"
-    "📱 Line: @payat"
+    "📧 Email: payat.jira@gmail.com\n"
+    "📱 Call/Line: 0805246996 (ค้นหาเบอร์โทร)"
 )
 
 
