@@ -32,7 +32,7 @@ CONTACT_MESSAGE = (
     "น้องแพลนมีหน้าที่เก็บข้อมูลเพียงอย่างเดียวครับ\n"
     "หากมีอะไรสอบถามเพิ่มเติม ติดต่อคุณพยัตได้เลยนะครับ 😊\n\n"
     "📧 Email: payat.jira@gmail.com\n"
-    "📱 Call/Line: 0805246996 (ค้นหาเบอร์โทร)"
+    "📱 Line: payat_jira\n"
 )
 
 
@@ -89,13 +89,17 @@ def handle_message(event: MessageEvent):
         parts = bot_reply.split("[SAVE_DATA]")
         reply_text = parts[0].strip()
         try:
-            json_str = parts[1].strip()
+            raw = parts[1].strip()
+            # หา JSON จาก { ตัวแรก ถึง } ตัวสุดท้าย
+            start = raw.index("{")
+            end = raw.rindex("}") + 1
+            json_str = raw[start:end]
             data = json.loads(json_str)
             save_to_sheets(user_id, data)
             # mark user ว่า complete แล้ว ไม่ clear session
             COMPLETED_USERS.add(user_id)
             print(f"✅ {user_id} complete")
-        except (json.JSONDecodeError, IndexError) as e:
+        except (json.JSONDecodeError, IndexError, ValueError) as e:
             print(f"Error parsing SAVE_DATA: {e}")
             reply_text = bot_reply.replace("[SAVE_DATA]", "").strip()
     else:
