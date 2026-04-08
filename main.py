@@ -1,5 +1,4 @@
 # main.py
-# จุดเริ่มต้นของ app ทั้งหมด
 
 import json
 from fastapi import FastAPI, Request, HTTPException
@@ -25,6 +24,16 @@ configuration = Configuration(access_token=LINE_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(LINE_CHANNEL_SECRET)
 
 RESET_COMMANDS = ["/reset", "reset", "/เริ่มใหม่", "เริ่มใหม่"]
+
+# เก็บสถานะว่า user ไหน save เสร็จแล้ว
+COMPLETED_USERS = set()
+
+CONTACT_MESSAGE = (
+    "น้องแพลนมีหน้าที่เก็บข้อมูลเพียงอย่างเดียวครับ\n"
+    "หากมีอะไรสอบถามเพิ่มเติม ติดต่อคุณพยัตได้เลยนะครับ 😊\n\n"
+    "📧 Email: payat@example.com\n"
+    "📱 Line: @payat"
+)
 
 
 @app.get("/")
@@ -59,19 +68,23 @@ def handle_message(event: MessageEvent):
     user_id = event.source.user_id
     user_message = event.message.text
 
-    # คำสั่ง reset
+    # reset command
     if user_message.strip().lower() in RESET_COMMANDS:
         clear_session(user_id)
+        COMPLETED_USERS.discard(user_id)
         reply_to_line(event, "ล้างข้อมูลเรียบร้อยแล้วครับ พิมพ์อะไรก็ได้เพื่อเริ่มบทสนทนาใหม่ 😊")
         return
 
-    # 1. โหลด history
-    history = get_history(user_id)
+    # สถานะที่ 2: save เสร็จแล้ว — ไม่เรียก Claude อีก ประหยัด cost
+    if user_id in COMPLETED_USERS:
+        reply_to_line(event, CONTACT_MESSAGE)
+        return
 
-    # 2. ส่งให้ Claude
+    # สถานะที่ 1: กำลังสัมภาษณ์อยู่
+    history = get_history(user_id)
     bot_reply = chat(user_id, history, user_message)
 
-    # 3. เช็ค SAVE_DATA
+    # เช็ค SAVE_DATA
     if "[SAVE_DATA]" in bot_reply:
         parts = bot_reply.split("[SAVE_DATA]")
         reply_text = parts[0].strip()
@@ -79,16 +92,18 @@ def handle_message(event: MessageEvent):
             json_str = parts[1].strip()
             data = json.loads(json_str)
             save_to_sheets(user_id, data)
-            clear_session(user_id)
+            # mark user ว่า complete แล้ว ไม่ clear session
+            COMPLETED_USERS.add(user_id)
+            print(f"✅ {user_id} complete")
         except (json.JSONDecodeError, IndexError) as e:
             print(f"Error parsing SAVE_DATA: {e}")
             reply_text = bot_reply.replace("[SAVE_DATA]", "").strip()
     else:
         reply_text = bot_reply
 
-    # 4. อัพเดท history
+    # อัพเดท history
     update_history(user_id, "user", user_message)
     update_history(user_id, "assistant", bot_reply)
 
-    # 5. ส่งกลับ LINE
+    # ส่งกลับ LINE
     reply_to_line(event, reply_text)
