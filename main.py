@@ -25,8 +25,9 @@ handler = WebhookHandler(LINE_CHANNEL_SECRET)
 
 RESET_COMMANDS = ["/reset", "reset", "/เริ่มใหม่", "เริ่มใหม่"]
 
-# เก็บสถานะว่า user ไหน save เสร็จแล้ว
-COMPLETED_USERS = set()
+# เก็บสถานะ completed ใน memory + session store
+# key = user_id, value = True
+COMPLETED_USERS: dict = {}
 
 CONTACT_MESSAGE = (
     "น้องแพลนมีหน้าที่เก็บข้อมูลเพียงอย่างเดียวครับ\n"
@@ -63,6 +64,20 @@ def reply_to_line(event, text: str):
         )
 
 
+def is_completed(user_id: str) -> bool:
+    """เช็คว่า user นี้ส่งข้อมูลแล้วหรือยัง
+    เก็บไว้ใน history เป็น marker เพื่อให้คงอยู่หลัง restart"""
+    if user_id in COMPLETED_USERS:
+        return True
+    # fallback: เช็คใน history ว่ามี COMPLETED marker ไหม
+    history = get_history(user_id)
+    for msg in history:
+        if msg.get("role") == "assistant" and "[COMPLETED]" in msg.get("content", ""):
+            COMPLETED_USERS[user_id] = True
+            return True
+    return False
+
+
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event: MessageEvent):
     user_id = event.source.user_id
@@ -71,12 +86,12 @@ def handle_message(event: MessageEvent):
     # reset command
     if user_message.strip().lower() in RESET_COMMANDS:
         clear_session(user_id)
-        COMPLETED_USERS.discard(user_id)
+        COMPLETED_USERS.pop(user_id, None)
         reply_to_line(event, "ล้างข้อมูลเรียบร้อยแล้วครับ พิมพ์อะไรก็ได้เพื่อเริ่มบทสนทนาใหม่ 😊")
         return
 
-    # สถานะที่ 2: save เสร็จแล้ว — ไม่เรียก Claude อีก ประหยัด cost
-    if user_id in COMPLETED_USERS:
+    # สถานะที่ 2: save เสร็จแล้ว — ไม่เรียก Claude
+    if is_completed(user_id):
         reply_to_line(event, CONTACT_MESSAGE)
         return
 
@@ -85,29 +100,29 @@ def handle_message(event: MessageEvent):
     bot_reply = chat(user_id, history, user_message)
 
     # เช็ค SAVE_DATA
-    if "[SAVE_DATA]" in bot_reply:
-        parts = bot_reply.split("[SAVE_DATA]")
-        reply_text = parts[0].strip()
+    if "[SAVE_DATA]" in bot_reply and "[END_SAVE_DATA]" in bot_reply:
+        # ตัด SAVE_DATA block ออกก่อนส่งลูกค้า
+        reply_text = bot_reply.split("[SAVE_DATA]")[0].strip()
         try:
-            raw = parts[1].strip()
-            # หา JSON จาก { ตัวแรก ถึง } ตัวสุดท้าย
-            start = raw.index("{")
-            end = raw.rindex("}") + 1
-            json_str = raw[start:end]
-            data = json.loads(json_str)
+            raw = bot_reply.split("[SAVE_DATA]")[1].split("[END_SAVE_DATA]")[0].strip()
+            data = {}
+            for line in raw.splitlines():
+                if ": " in line:
+                    key, _, value = line.partition(": ")
+                    data[key.strip()] = value.strip()
             save_to_sheets(user_id, data)
-            # mark user ว่า complete แล้ว ไม่ clear session
-            COMPLETED_USERS.add(user_id)
-            print(f"✅ {user_id} complete")
-        except (json.JSONDecodeError, IndexError, ValueError) as e:
+            # บันทึก COMPLETED marker ไว้ใน history เพื่อให้คงอยู่หลัง restart
+            COMPLETED_USERS[user_id] = True
+            update_history(user_id, "user", user_message)
+            update_history(user_id, "assistant", "[COMPLETED]")
+            print(f"✅ {user_id} complete — {data.get('nickname', '')}")
+        except Exception as e:
             print(f"Error parsing SAVE_DATA: {e}")
-            reply_text = bot_reply.replace("[SAVE_DATA]", "").strip()
+            update_history(user_id, "user", user_message)
+            update_history(user_id, "assistant", bot_reply)
     else:
         reply_text = bot_reply
+        update_history(user_id, "user", user_message)
+        update_history(user_id, "assistant", bot_reply)
 
-    # อัพเดท history
-    update_history(user_id, "user", user_message)
-    update_history(user_id, "assistant", bot_reply)
-
-    # ส่งกลับ LINE
     reply_to_line(event, reply_text)
