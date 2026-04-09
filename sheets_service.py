@@ -32,7 +32,7 @@ HEADERS = [
     "living_will", "surviving_spouse_plan",
     "guardian_primary", "guardian_backup",
     "money_guardian_primary", "money_guardian_backup",
-    "letter_to_children", "gaps_for_payat", "summary",
+    "gaps_for_payat", "summary",
 ]
 
 
@@ -110,7 +110,6 @@ def save_to_sheets(line_user_id: str, data: dict):
             data.get("guardian_backup", ""),
             data.get("money_guardian_primary", ""),
             data.get("money_guardian_backup", ""),
-            data.get("letter_to_children", ""),
             data.get("gaps_for_payat", ""),
             data.get("summary", ""),
         ]
