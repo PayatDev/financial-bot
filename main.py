@@ -97,7 +97,12 @@ def handle_message(event: MessageEvent):
 
     # สถานะที่ 1: กำลังสัมภาษณ์อยู่
     history = get_history(user_id)
-    bot_reply = chat(user_id, history, user_message)
+    try:
+        bot_reply = chat(user_id, history, user_message)
+    except Exception as e:
+        print(f"❌ Claude API error: {e}")
+        reply_to_line(event, "ขออภัยครับ ระบบขัดข้องชั่วคราว กรุณาลองใหม่อีกครั้งในอีกสักครู่นะครับ 🙏")
+        return
 
     # เช็ค SAVE_DATA
     if "[SAVE_DATA]" in bot_reply and "[END_SAVE_DATA]" in bot_reply:
