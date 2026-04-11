@@ -18,6 +18,13 @@ from claude_service import chat
 from session_store import get_history, update_history, clear_session
 from sheets_service import save_to_sheets
 
+from email_service import notify_new_client
+
+@app.get("/test-email")
+def test_email():
+    notify_new_client("พิม", "สัตวแพทย์", "35")
+    return {"status": "sent"}
+
 app = FastAPI()
 
 configuration = Configuration(access_token=LINE_CHANNEL_ACCESS_TOKEN)
@@ -35,13 +42,6 @@ CONTACT_MESSAGE = (
     "📧 Email: payat.jira@gmail.com\n"
     "📞 Call/Line: 080-524-6996"
 )
-
-from email_service import notify_new_client
-
-@app.get("/test-email")
-def test_email():
-    notify_new_client("พิม", "สัตวแพทย์", "35")
-    return {"status": "sent"}
     
 @app.get("/")
 def root():
