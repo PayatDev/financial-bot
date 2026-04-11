@@ -141,19 +141,20 @@ format:
     result = response.content[0].text
 
     if "---SPLIT---" not in result:
-    print(f"DEBUG full response: {result[:500]}")  # เพิ่ม
+    print(f"DEBUG full response: {result[:500]}")
     raise ValueError("ไม่พบ ---SPLIT--- ใน response")
 
     part1, part2 = result.split("---SPLIT---", 1)
     part2 = part2.strip()
-    print(f"DEBUG part2: {part2[:300]}")  # เพิ่ม
-
+    print(f"DEBUG part2: {part2[:300]}")
+    
     start = part2.find("[")
     end = part2.rfind("]") + 1
-
+    
     if start == -1 or end == 0:
+        print(f"DEBUG part2 full: {part2}")
         raise ValueError("ไม่พบ JSON array ใน part2")
-
+    
     issues = json.loads(part2[start:end])
     return part1.strip(), issues
 
