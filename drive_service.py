@@ -23,7 +23,11 @@ def upload_file(local_path: str, filename: str) -> str:
         local_path,
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
-    f = service.files().create(body=meta, media_body=media, fields="id").execute()
+    f = service.files().create(
+        body=meta,
+        media_body=media,
+        fields="id",
+        supportsAllDrives=True).execute()
     file_id = f.get("id")
     print(f"✅ Uploaded → {filename} (id: {file_id})")
     return file_id
