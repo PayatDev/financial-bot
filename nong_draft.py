@@ -12,7 +12,7 @@ from googleapiclient.discovery import build
 from drive_service import upload_file
 from email_service import notify_new_client
 
-DEV_MODE = True  # เปลี่ยนเป็น False ตอน prod
+DEV_MODE = True
 
 SHEET_ID = os.environ.get("GOOGLE_SHEET_ID")
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
@@ -27,26 +27,35 @@ GREEN = "1A7A4A"
 RED   = "C0392B"
 AMBER = "D35400"
 
-# ── helpers ──────────────────────────────────────────────────────────
-def fill(h): return PatternFill("solid", start_color=h, end_color=h)
+
+def fill(h):
+    return PatternFill("solid", start_color=h, end_color=h)
+
+
 def fnt(bold=False, size=10, color="222222", italic=False):
     return Font(name="Arial", bold=bold, size=size, color=color, italic=italic)
+
+
 def thin(color="CCCCCC"):
     s = Side(style="thin", color=color)
     return Border(left=s, right=s, top=s, bottom=s)
+
+
 def cal(h="left"):
     return Alignment(horizontal=h, vertical="center", wrap_text=True)
+
+
 def put(ws, row, col, val="", bg=WHITE, bold=False, color="222222",
         size=10, align="left", italic=False, bc="CCCCCC"):
     c = ws.cell(row=row, column=col, value=val)
-    c.fill = fill(bg); c.font = fnt(bold, size, color, italic)
+    c.fill = fill(bg)
+    c.font = fnt(bold, size, color, italic)
     c.alignment = cal("center" if align == "center" else "left")
     c.border = thin(bc)
     return c
 
 
-# ── ดึงข้อมูลจาก Sheets ──────────────────────────────────────────────
-def get_data_from_sheets() -> dict:
+def get_data_from_sheets():
     sa_json = os.environ.get("GOOGLE_CREDENTIALS_JSON")
     creds_dict = json.loads(sa_json)
     creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
@@ -64,74 +73,71 @@ def get_data_from_sheets() -> dict:
     return dict(zip(headers, row))
 
 
-# ── เรียก Claude API ──────────────────────────────────────────────────
-def call_claude(data: dict) -> tuple[str, list]:
-    prompt = f"""คุณคือผู้ช่วยของคุณพยัต นักวางแผนการเงินและกำลังเรียนกฎหมาย
+def build_prompt(data):
+    data_str = json.dumps(data, ensure_ascii=False, indent=2)
+    lines = [
+        "คุณคือผู้ช่วยของคุณพยัต นักวางแผนการเงินและกำลังเรียนกฎหมาย",
+        "",
+        "รับข้อมูลลูกค้า แล้ว output 2 ส่วน คั่นด้วย ---SPLIT---",
+        "",
+        "===== ส่วนที่ 1 =====",
+        "",
+        "Block A — เรื่องราวลูกค้า",
+        "เล่าเรื่องต่อเนื่อง 3-5 ย่อหน้า ภาษาไทยธรรมดา อ่านเข้าใจง่าย",
+        "ครอบคลุมทุก field ที่มีข้อมูล ข้ามข้อมูลที่เป็น ไม่มี หรือ ไม่ได้ระบุ",
+        "",
+        "Block B — ข้อมูลรายช่อง",
+        "แสดงทุก field รูปแบบ ชื่อ: ค่า ทีละบรรทัด",
+        "",
+        "---SPLIT---",
+        "",
+        "===== ส่วนที่ 2 =====",
+        "",
+        "ประเมิน 16 ประเด็นตามลำดับนี้เท่านั้น",
+        "output เป็น JSON array เท่านั้น ไม่มีข้อความอื่น ไม่มี markdown",
+        "",
+        "ประเด็น:",
+        "1. เงินฉุกเฉิน 90 วัน",
+        "2. เงินสดสำรองคลินิก 6-12 เดือน",
+        "3. ประกันชีวิตคุ้มครอง",
+        "4. ประกันสุขภาพ / ทุพพลภาพ",
+        "5. ประกันอุบัติเหตุ",
+        "6. ที่ดินมรดก — ระบุผู้รับใน Will",
+        "7. คู่สมรสแต่งงานใหม่",
+        "8. I Love You Will — กรณีคู่สมรสตายก่อนหรือพร้อมกัน",
+        "9. Business Succession",
+        "10. ส่วนแบ่งประกันหนี้ส่วนเกิน",
+        "11. Guardian of Person",
+        "12. Money Guardian แยกจาก Guardian",
+        "13. Money Guardian สำรอง",
+        "14. ที่อยู่เอกสารสำคัญ",
+        "15. ขั้นตอนแรกหลังเกิดเหตุ",
+        "16. จดหมายถึงคู่สมรส",
+        "",
+        "format:",
+        '[{"ลำดับ":1,"ประเด็น":"...","หมวด":"...","สถานะ":"...","ความเสี่ยง":"...","แนะนำ":"..."}]',
+        "",
+        "หมวด ใช้ได้: สภาพคล่อง, ประกัน, พินัยกรรม, ผู้ปกครอง, คู่มือฉุกเฉิน",
+        "สถานะ ใช้ได้: ❌ ขาด, ⚠️ บางส่วน, ✅ ครบ",
+        "",
+        "กฎ:",
+        "- ไม่มีประกันชีวิตคุ้มครอง → ❌ ขาด",
+        "- ไม่มีเงินฉุกเฉิน 90 วัน → ❌ ขาด",
+        "- ไม่มี Contingency Clause → ❌ ขาด",
+        "- Money Guardian = Guardian คนเดียวกัน → ⚠️ บางส่วน",
+        "- กังวลคู่สมรสแต่งใหม่แต่ไม่มีแผน → ⚠️ บางส่วน",
+        "- ไม่มี Money Guardian สำรอง → ⚠️ บางส่วน",
+        "- field ไม่มีข้อมูล → ❌ ขาด",
+        "- ประเมินจากข้อมูลจริงเท่านั้น",
+        "",
+        "ข้อมูลลูกค้า:",
+        data_str,
+    ]
+    return "\n".join(lines)
 
-รับข้อมูลลูกค้า แล้ว output 2 ส่วน คั่นด้วย ---SPLIT---
 
-===== ส่วนที่ 1 =====
-
-เขียน 2 blocks ต่อเนื่องกัน
-
-Block A — เรื่องราวลูกค้า
-เล่าเรื่องต่อเนื่อง 3-5 ย่อหน้า ภาษาไทยธรรมดา อ่านเข้าใจง่าย
-ครอบคลุมทุก field ที่มีข้อมูล ข้ามข้อมูลที่เป็น "ไม่มี" หรือ "ไม่ได้ระบุ"
-
-Block B — ข้อมูลรายช่อง
-ขึ้นบรรทัดใหม่หลัง Block A
-แสดงทุก field ในรูปแบบ "ชื่อ: ค่า" ทีละบรรทัด
-
----SPLIT---
-
-===== ส่วนที่ 2 =====
-
-ประเมิน 16 ประเด็นต่อไปนี้ตามลำดับนี้เท่านั้น
-output เป็น JSON array เท่านั้น ไม่มีข้อความอื่น ไม่มี markdown
-
-ประเด็น (ตามลำดับ):
-1. เงินฉุกเฉิน 90 วัน
-2. เงินสดสำรองคลินิก 6-12 เดือน
-3. ประกันชีวิตคุ้มครอง
-4. ประกันสุขภาพ / ทุพพลภาพ
-5. ประกันอุบัติเหตุ
-6. ที่ดินมรดก — ระบุผู้รับใน Will
-7. คู่สมรสแต่งงานใหม่
-8. I Love You Will — กรณีคู่สมรสตายก่อนหรือพร้อมกัน
-9. Business Succession
-10. ส่วนแบ่งประกันหนี้ส่วนเกิน
-11. Guardian of Person
-12. Money Guardian แยกจาก Guardian
-13. Money Guardian สำรอง
-14. ที่อยู่เอกสารสำคัญ
-15. ขั้นตอนแรกหลังเกิดเหตุ
-16. จดหมายถึงคู่สมรส
-
-format:
-[
-  {{
-    "ลำดับ": 1,
-    "ประเด็น": "ชื่อตามด้านบน",
-    "หมวด": "สภาพคล่อง หรือ ประกัน หรือ พินัยกรรม หรือ ผู้ปกครอง หรือ คู่มือฉุกเฉิน",
-    "สถานะ": "❌ ขาด หรือ ⚠️ บางส่วน หรือ ✅ ครบ",
-    "ความเสี่ยง": "ถ้าปล่อยไว้จะเกิดอะไร ไม่เกิน 2 ประโยค ภาษาธรรมดา",
-    "แนะนำ": "ควรทำอะไร ไม่เกิน 1 ประโยค"
-  }}
-]
-
-กฎ:
-- ไม่มีประกันชีวิตคุ้มครอง → ❌ ขาด
-- ไม่มีเงินฉุกเฉิน 90 วัน → ❌ ขาด
-- ไม่มี Contingency Clause → ❌ ขาด
-- Money Guardian = Guardian คนเดียวกัน → ⚠️ บางส่วน
-- กังวลคู่สมรสแต่งใหม่แต่ไม่มีแผน → ⚠️ บางส่วน
-- ไม่มี Money Guardian สำรอง → ⚠️ บางส่วน
-- field ไม่มีข้อมูล → ❌ ขาด
-- ประเมินจากข้อมูลจริงเท่านั้น
-
-ข้อมูลลูกค้า:
-{json.dumps(data, ensure_ascii=False, indent=2)}"""
-
+def call_claude(data):
+    prompt = build_prompt(data)
     client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
     response = client.messages.create(
         model="claude-sonnet-4-20250514",
@@ -139,84 +145,82 @@ format:
         messages=[{"role": "user", "content": prompt}]
     )
     result = response.content[0].text
+    print(f"DEBUG result[:300]: {result[:300]}")
 
     if "---SPLIT---" not in result:
-    print(f"DEBUG full response: {result[:500]}")
-    raise ValueError("ไม่พบ ---SPLIT--- ใน response")
+        print(f"DEBUG no split found: {result[:500]}")
+        raise ValueError("ไม่พบ ---SPLIT---")
 
     part1, part2 = result.split("---SPLIT---", 1)
     part2 = part2.strip()
-    print(f"DEBUG part2: {part2[:300]}")
-    
+    print(f"DEBUG part2[:300]: {part2[:300]}")
+
     start = part2.find("[")
     end = part2.rfind("]") + 1
-    
+
     if start == -1 or end == 0:
-        print(f"DEBUG part2 full: {part2}")
-        raise ValueError("ไม่พบ JSON array ใน part2")
-    
+        print(f"DEBUG no json found: {part2}")
+        raise ValueError("ไม่พบ JSON array")
+
     issues = json.loads(part2[start:end])
     return part1.strip(), issues
 
-if start == -1 or end == 0:
-    print(f"DEBUG part2 full: {part2}")  # เพิ่ม
-    raise ValueError("ไม่พบ JSON array ใน part2")
 
-# ── build xlsx ────────────────────────────────────────────────────────
-def build_workbook(data: dict, story: str, issues: list) -> tuple[str, str]:
+def build_workbook(data, story, issues):
     wb = Workbook()
 
-    # ── Tab 1: เรื่องราว + ข้อมูลรายช่อง ──
+    # Tab 1
     ws1 = wb.active
     ws1.title = "1 เรื่องราว"
     ws1.sheet_view.showGridLines = False
     ws1.column_dimensions["A"].width = 26
     ws1.column_dimensions["B"].width = 54
 
-    # title
     ws1.row_dimensions[1].height = 32
     c = ws1.cell(row=1, column=1,
         value=f"{data.get('nickname','')} | {data.get('occupation','')} | {data.get('age','')} ปี")
-    c.fill = fill(NAVY); c.font = fnt(bold=True, size=13, color=WHITE)
-    c.alignment = cal(); c.border = thin(NAVY)
+    c.fill = fill(NAVY)
+    c.font = fnt(bold=True, size=13, color=WHITE)
+    c.alignment = cal()
+    c.border = thin(NAVY)
     ws1.merge_cells("A1:B1")
 
-    # แยก Block A และ Block B จาก story
     blocks = story.split("Block B")
     block_a = blocks[0].replace("Block A —", "").replace("Block A—", "").strip()
     block_b = blocks[1].strip() if len(blocks) > 1 else ""
 
-    # Block A header
     row = 2
     ws1.row_dimensions[row].height = 18
     c = ws1.cell(row=row, column=1, value="เรื่องราวลูกค้า")
-    c.fill = fill(MGRAY); c.font = fnt(bold=True, size=10, color=NAVY)
-    c.alignment = cal(); c.border = thin(MGRAY)
+    c.fill = fill(MGRAY)
+    c.font = fnt(bold=True, size=10, color=NAVY)
+    c.alignment = cal()
+    c.border = thin(MGRAY)
     ws1.merge_cells(f"A{row}:B{row}")
     row += 1
 
-    # Block A content
     for para in block_a.split("\n"):
         para = para.strip()
         if not para:
             continue
         ws1.row_dimensions[row].height = 60
-        put(ws1, row, 1, "", bg=LGRAY)
-        c = ws1.cell(row=row, column=2, value=para)
-        c.fill = fill(LGRAY); c.font = fnt(size=10)
-        c.alignment = cal(); c.border = thin()
-        ws1.merge_cells(f"A{row}:A{row}")
+        c = ws1.cell(row=row, column=1, value=para)
+        c.fill = fill(LGRAY)
+        c.font = fnt(size=10)
+        c.alignment = cal()
+        c.border = thin()
+        ws1.merge_cells(f"A{row}:B{row}")
         row += 1
 
-    # Block B header
     ws1.row_dimensions[row].height = 18
     c = ws1.cell(row=row, column=1, value="ข้อมูลรายช่อง")
-    c.fill = fill(MGRAY); c.font = fnt(bold=True, size=10, color=NAVY)
-    c.alignment = cal(); c.border = thin(MGRAY)
+    c.fill = fill(MGRAY)
+    c.font = fnt(bold=True, size=10, color=NAVY)
+    c.alignment = cal()
+    c.border = thin(MGRAY)
     ws1.merge_cells(f"A{row}:B{row}")
     row += 1
 
-    # Block B content
     for line in block_b.split("\n"):
         line = line.strip().lstrip("—").strip()
         if not line or "Block B" in line:
@@ -230,7 +234,7 @@ def build_workbook(data: dict, story: str, issues: list) -> tuple[str, str]:
         put(ws1, row, 2, value.strip(), size=10)
         row += 1
 
-    # ── Tab 2: วิเคราะห์ ──
+    # Tab 2
     ws2 = wb.create_sheet("2 วิเคราะห์")
     ws2.sheet_view.showGridLines = False
     ws2.column_dimensions["A"].width = 5
@@ -244,15 +248,21 @@ def build_workbook(data: dict, story: str, issues: list) -> tuple[str, str]:
 
     ws2.row_dimensions[1].height = 32
     c = ws2.cell(row=1, column=1, value="วิเคราะห์ช่องว่าง")
-    c.fill = fill(NAVY); c.font = fnt(bold=True, size=13, color=WHITE)
-    c.alignment = cal(); c.border = thin(NAVY)
+    c.fill = fill(NAVY)
+    c.font = fnt(bold=True, size=13, color=WHITE)
+    c.alignment = cal()
+    c.border = thin(NAVY)
     ws2.merge_cells("A1:H1")
 
     ws2.row_dimensions[2].height = 24
-    for col, h in [(1,"#"),(2,"หมวด"),(3,"ประเด็น"),(4,"ความเสี่ยง"),(5,"แนะนำ"),(6,"สถานะ"),(7,"ความเห็นคุณพยัต"),(8,"Approve")]:
+    headers = [(1,"#"),(2,"หมวด"),(3,"ประเด็น"),(4,"ความเสี่ยง"),
+               (5,"แนะนำ"),(6,"สถานะ"),(7,"ความเห็นคุณพยัต"),(8,"Approve")]
+    for col, h in headers:
         c = ws2.cell(row=2, column=col, value=h)
-        c.fill = fill(BLUE); c.font = fnt(bold=True, size=9, color=WHITE)
-        c.alignment = cal("center"); c.border = thin(WHITE)
+        c.fill = fill(BLUE)
+        c.font = fnt(bold=True, size=9, color=WHITE)
+        c.alignment = cal("center")
+        c.border = thin(WHITE)
 
     STATUS_STYLE = {
         "❌ ขาด":      ("FDECEA", RED),
@@ -272,18 +282,18 @@ def build_workbook(data: dict, story: str, issues: list) -> tuple[str, str]:
         put(ws2, i, 4, item.get("ความเสี่ยง", ""), bg=bg, color="444444", size=9, italic=True)
         put(ws2, i, 5, item.get("แนะนำ", ""), bg=bg, bold=True, color=GREEN, size=10)
 
-        # สถานะ
         c = ws2.cell(row=i, column=6, value=status)
-        c.fill = fill(st_bg); c.font = fnt(bold=True, size=10, color=st_fg)
-        c.alignment = cal("center"); c.border = thin(st_fg)
+        c.fill = fill(st_bg)
+        c.font = fnt(bold=True, size=10, color=st_fg)
+        c.alignment = cal("center")
+        c.border = thin(st_fg)
 
-        put(ws2, i, 7, "", bg=LYELL, size=10)   # ช่องคุณพยัต
-        put(ws2, i, 8, "", bg=WHITE, align="center", size=12)  # approve
+        put(ws2, i, 7, "", bg=LYELL, size=10)
+        put(ws2, i, 8, "", bg=WHITE, align="center", size=12)
 
     ws2.freeze_panes = "A3"
     ws1.freeze_panes = "A2"
 
-    # save
     nickname = data.get("nickname", "ลูกค้า")
     date_str = datetime.now().strftime("%Y%m%d")
     filename = f"{nickname}_{date_str}.xlsx"
@@ -292,27 +302,22 @@ def build_workbook(data: dict, story: str, issues: list) -> tuple[str, str]:
     return tmp.name, filename
 
 
-# ── main ─────────────────────────────────────────────────────────────
-def run(data: dict = None):
+def run(data=None):
     if DEV_MODE or data is None:
-        print("🔧 DEV MODE — ดึงข้อมูลจาก Sheets")
+        print("DEV MODE — ดึงข้อมูลจาก Sheets")
         data = get_data_from_sheets()
 
-    print(f"📋 {data.get('nickname')} | {data.get('occupation')} | {data.get('age')} ปี")
+    print(f"ข้อมูล: {data.get('nickname')} | {data.get('occupation')} | {data.get('age')} ปี")
+    print("กำลังวิเคราะห์...")
 
-    # เรียก Claude
-    print("🤖 กำลังวิเคราะห์...")
     story, issues = call_claude(data)
-    print(f"✅ ได้ {len(issues)} ประเด็น")
+    print(f"ได้ {len(issues)} ประเด็น")
 
-    # สร้างไฟล์
     local_path, filename = build_workbook(data, story, issues)
-    print(f"✅ สร้างไฟล์: {filename}")
+    print(f"สร้างไฟล์: {filename}")
 
-    # upload Drive
     upload_file(local_path, filename)
 
-    # แจ้ง LINE
     notify_new_client(
         nickname=data.get("nickname", ""),
         occupation=data.get("occupation", ""),
@@ -320,4 +325,4 @@ def run(data: dict = None):
     )
 
     os.unlink(local_path)
-    print("🎉 เสร็จสิ้น")
+    print("เสร็จสิ้น")
