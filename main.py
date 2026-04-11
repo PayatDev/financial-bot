@@ -19,6 +19,7 @@ from session_store import get_history, update_history, clear_session
 from sheets_service import save_to_sheets
 
 from email_service import notify_new_client
+from drive_service import get_drive_service
 
 app = FastAPI()
 
@@ -46,6 +47,16 @@ def root():
 def test_email():
     notify_new_client("พิม", "สัตวแพทย์", "35")
     return {"status": "sent"}
+
+@app.get("/test-drive")
+def test_drive():
+    service = get_drive_service()
+    results = service.files().list(
+        q=f"'{os.environ.get('GOOGLE_DRIVE_FOLDER_ID')}' in parents",
+        fields="files(id, name)"
+    ).execute()
+    files = results.get("files", [])
+    return {"files": files, "count": len(files)}
 
 @app.post("/webhook")
 async def webhook(request: Request):
