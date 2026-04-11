@@ -76,7 +76,7 @@ def get_data_from_sheets():
 def build_prompt(data):
     data_str = json.dumps(data, ensure_ascii=False, indent=2)
     lines = [
-        "คุณคือผู้ช่วยของคุณพยัต นักวางแผนการเงินและกำลังเรียนกฎหมาย",
+        "คุณคือผู้ช่วยของคุณพยัต นักวางแผนการเงินและกฎหมาย",
         "",
         "รับข้อมูลลูกค้า แล้ว output 2 ส่วน คั่นด้วย ---SPLIT---",
         "",
@@ -89,7 +89,7 @@ def build_prompt(data):
         "Block B — ข้อมูลรายช่อง",
         "แสดงทุก field รูปแบบ ชื่อ: ค่า ทีละบรรทัด",
         "",
-        "---SPLIT---",
+        "จากนั้นพิมพ์ ---SPLIT--- แล้วตามด้วยส่วนที่ 2 ทันที",
         "",
         "===== ส่วนที่ 2 =====",
         "",
@@ -141,7 +141,7 @@ def call_claude(data):
     client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
     response = client.messages.create(
         model="claude-sonnet-4-20250514",
-        max_tokens=4000,
+        max_tokens=8000,
         messages=[{"role": "user", "content": prompt}]
     )
     result = response.content[0].text
