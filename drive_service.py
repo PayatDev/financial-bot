@@ -16,18 +16,23 @@ def get_drive_service():
 
 
 def upload_file(local_path: str, filename: str) -> str:
-    """Upload file to Drive folder — return file id"""
     service = get_drive_service()
-    meta = {"name": filename, "parents": [FOLDER_ID]}
+    meta = {
+        "name": filename,
+        "parents": [FOLDER_ID]
+    }
     media = MediaFileUpload(
         local_path,
-        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        resumable=True
     )
     f = service.files().create(
         body=meta,
         media_body=media,
         fields="id",
-        supportsAllDrives=True).execute()
+        supportsAllDrives=True,
+        supportsTeamDrives=True
+    ).execute()
     file_id = f.get("id")
     print(f"✅ Uploaded → {filename} (id: {file_id})")
     return file_id
