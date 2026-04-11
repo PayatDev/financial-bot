@@ -9,7 +9,7 @@ FOLDER_ID = os.environ.get("GOOGLE_DRIVE_FOLDER_ID")
 
 
 def get_drive_service():
-    sa_json = os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON")
+    sa_json = os.environ.get("GOOGLE_CREDENTIALS_JSON")
     creds_dict = json.loads(sa_json)
     creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
     return build("drive", "v3", credentials=creds)
