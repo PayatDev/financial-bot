@@ -1,34 +1,34 @@
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 import os
+import urllib.request
+import json
 
-GMAIL_USER = os.environ.get("GMAIL_USER")
-GMAIL_APP_PASSWORD = os.environ.get("GMAIL_APP_PASSWORD")
+LINE_CHANNEL_ACCESS_TOKEN = os.environ.get("LINE_CHANNEL_ACCESS_TOKEN")
+PAYAT_USER_ID = "U86c03cd5153459d2dc9ce52adc608147"
 
+def send_line_message(text: str):
+    data = json.dumps({
+        "to": PAYAT_USER_ID,
+        "messages": [{"type": "text", "text": text}]
+    }).encode()
 
-def send_email(to: str, subject: str, body: str):
-    msg = MIMEMultipart()
-    msg["From"] = GMAIL_USER
-    msg["To"] = to
-    msg["Subject"] = subject
-    msg.attach(MIMEText(body, "plain", "utf-8"))
-
-    with smtplib.SMTP("smtp.gmail.com", 587) as server:
-        server.ehlo()
-        server.starttls()
-        server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
-        server.sendmail(GMAIL_USER, to, msg.as_string())
-        print(f"✅ Email sent → {to} | {subject}")
-
+    req = urllib.request.Request(
+        "https://api.line.me/v2/bot/message/push",
+        data=data,
+        headers={
+            "Authorization": f"Bearer {LINE_CHANNEL_ACCESS_TOKEN}",
+            "Content-Type": "application/json"
+        },
+        method="POST"
+    )
+    urllib.request.urlopen(req)
+    print(f"✅ LINE sent → {PAYAT_USER_ID}")
 
 def notify_new_client(nickname: str, occupation: str, age: str):
-    subject = f"[ลูกค้าใหม่] {nickname} | {occupation} | {age} ปี"
-    body = (
-        f"มีลูกค้าใหม่เข้ามาครับ\n\n"
+    text = (
+        f"🆕 ลูกค้าใหม่ครับ\n\n"
         f"ชื่อ: {nickname}\n"
         f"อาชีพ: {occupation}\n"
         f"อายุ: {age} ปี\n\n"
         f"เปิด Google Drive เพื่อดูไฟล์ได้เลยครับ"
     )
-    send_email(GMAIL_USER, subject, body)
+    send_line_message(text)
