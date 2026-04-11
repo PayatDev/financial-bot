@@ -141,6 +141,7 @@ format:
     result = response.content[0].text
 
     if "---SPLIT---" not in result:
+        print(f"DEBUG full response: {result[:500]}")  # เพิ่ม
         raise ValueError("ไม่พบ ---SPLIT--- ใน response")
 
     part1, part2 = result.split("---SPLIT---", 1)
