@@ -20,11 +20,6 @@ from sheets_service import save_to_sheets
 
 from email_service import notify_new_client
 
-@app.get("/test-email")
-def test_email():
-    notify_new_client("พิม", "สัตวแพทย์", "35")
-    return {"status": "sent"}
-
 app = FastAPI()
 
 configuration = Configuration(access_token=LINE_CHANNEL_ACCESS_TOKEN)
@@ -47,6 +42,10 @@ CONTACT_MESSAGE = (
 def root():
     return {"status": "Financial Bot is running! 🤖"}
 
+@app.get("/test-email")
+def test_email():
+    notify_new_client("พิม", "สัตวแพทย์", "35")
+    return {"status": "sent"}
 
 @app.post("/webhook")
 async def webhook(request: Request):
