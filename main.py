@@ -20,6 +20,7 @@ from sheets_service import save_to_sheets
 
 from email_service import notify_new_client
 from drive_service import get_drive_service
+from nong_draft import run as draft_run
 
 app = FastAPI()
 
@@ -57,6 +58,11 @@ def test_drive():
     ).execute()
     files = results.get("files", [])
     return {"files": files, "count": len(files)}
+
+@app.get("/test-draft")
+def test_draft():
+    draft_run()
+    return {"status": "done"}
 
 @app.post("/webhook")
 async def webhook(request: Request):
