@@ -204,14 +204,14 @@ def build_workbook(data, story, issues):
         para = para.strip()
         if not para:
             continue
-        ws1.row_dimensions[row].height = 60
-        c = ws1.cell(row=row, column=1, value=para)
-        c.fill = fill(LGRAY)
-        c.font = fnt(size=10)
-        c.alignment = cal()
-        c.border = thin()
-        ws1.merge_cells(f"A{row}:B{row}")
-        row += 1
+    ws1.row_dimensions[row].height = 60
+    c = ws1.cell(row=row, column=1, value=para)
+    c.fill = fill(LGRAY)
+    c.font = fnt(size=10)
+    c.alignment = cal()
+    c.border = thin()
+    ws1.merge_cells(f"A{row}:B{row}")
+    row += 1
 
     ws1.row_dimensions[row].height = 18
     c = ws1.cell(row=row, column=1, value="ข้อมูลรายช่อง")
@@ -221,19 +221,44 @@ def build_workbook(data, story, issues):
     c.border = thin(MGRAY)
     ws1.merge_cells(f"A{row}:B{row}")
     row += 1
+    
+    # ดึงจาก data dict โดยตรง
+    FIELD_LABELS = [
+        ("nickname", "ชื่อเล่น"), ("age", "อายุ"), ("gender", "เพศ"),
+        ("occupation", "อาชีพ"), ("health", "สุขภาพ"), ("email", "อีเมล"),
+        ("hobbies_and_risks", "งานอดิเรก"),
+        ("spouse_nickname", "คู่สมรส"), ("spouse_age", "อายุคู่สมรส"),
+        ("spouse_occupation", "อาชีพคู่สมรส"), ("spouse_income", "รายได้คู่สมรส"),
+        ("spouse_health", "สุขภาพคู่สมรส"), ("spouse_status", "สถานะ"),
+        ("children", "ลูก"), ("children_outside_marriage", "บุตรนอกสมรส"),
+        ("assets_cash", "เงินสด"), ("assets_property", "อสังหาริมทรัพย์"),
+        ("assets_investment", "การลงทุน"), ("assets_crypto_wallet", "คริปโต"),
+        ("assets_insurance_savings", "ประกันสะสม"), ("assets_digital", "ทรัพย์สินดิจิทัล"),
+        ("assets_business", "กิจการ"), ("assets_valuables", "ของมีค่า"),
+        ("debt", "หนี้สิน"), ("guarantor", "ค้ำประกัน"),
+        ("insurance_life", "ประกันชีวิต"), ("insurance_health", "ประกันสุขภาพ"),
+        ("insurance_group", "ประกันกลุ่ม"), ("welfare", "สวัสดิการ"),
+        ("funeral_wishes", "ความปรารถนางานศพ"), ("emergency_cash_90days", "เงินฉุกเฉิน 90 วัน"),
+        ("estate_admin_cost", "ต้นทุนจัดการมรดก"), ("asset_distribution", "แผนแบ่งทรัพย์"),
+        ("debt_responsibility", "หนี้ใครรับผิดชอบ"), ("business_succession", "แผนกิจการ"),
+        ("urgent_manager", "ผู้จัดการฉุกเฉิน"), ("estate_executor", "ผู้จัดการมรดก"),
+        ("financial_poa", "Financial POA"), ("living_will", "Living Will"),
+        ("surviving_spouse_plan", "แผนคู่สมรสที่รอดชีวิต"),
+        ("guardian_primary", "Guardian หลัก"), ("guardian_backup", "Guardian สำรอง"),
+        ("money_guardian_primary", "Money Guardian หลัก"),
+        ("money_guardian_backup", "Money Guardian สำรอง"),
+        ("documents_location", "ที่อยู่เอกสาร"),
+        ("letter_to_children", "จดหมายถึงลูก"), ("letter_to_spouse", "จดหมายถึงคู่สมรส"),
+    ]
 
-    for line in block_b.split("\n"):
-        line = line.strip().lstrip("—").strip()
-        if not line or "Block B" in line:
-            continue
-        if ": " in line:
-            label, _, value = line.partition(": ")
-        else:
-            label, value = line, ""
-        ws1.row_dimensions[row].height = 28
-        put(ws1, row, 1, label.strip(), bg=LGRAY, bold=True, color="444444", size=9)
-        put(ws1, row, 2, value.strip(), size=10)
-        row += 1
+for key, label in FIELD_LABELS:
+    val = data.get(key, "")
+    if not val or val in ("ไม่มี", "ไม่ได้ระบุ", ""):
+        continue
+    ws1.row_dimensions[row].height = 30
+    put(ws1, row, 1, label, bg=LGRAY, bold=True, color="444444", size=9)
+    put(ws1, row, 2, val, size=10)
+    row += 1
 
     # Tab 2
     ws2 = wb.create_sheet("2 วิเคราะห์")
