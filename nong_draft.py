@@ -27,6 +27,34 @@ GREEN = "1A7A4A"
 RED   = "C0392B"
 AMBER = "D35400"
 
+FIELD_LABELS = [
+    ("nickname", "ชื่อเล่น"), ("age", "อายุ"), ("gender", "เพศ"),
+    ("occupation", "อาชีพ"), ("health", "สุขภาพ"), ("email", "อีเมล"),
+    ("hobbies_and_risks", "งานอดิเรก"),
+    ("spouse_nickname", "คู่สมรส"), ("spouse_age", "อายุคู่สมรส"),
+    ("spouse_occupation", "อาชีพคู่สมรส"), ("spouse_income", "รายได้คู่สมรส"),
+    ("spouse_health", "สุขภาพคู่สมรส"), ("spouse_status", "สถานะ"),
+    ("children", "ลูก"), ("children_outside_marriage", "บุตรนอกสมรส"),
+    ("assets_cash", "เงินสด"), ("assets_property", "อสังหาริมทรัพย์"),
+    ("assets_investment", "การลงทุน"), ("assets_crypto_wallet", "คริปโต"),
+    ("assets_insurance_savings", "ประกันสะสม"), ("assets_digital", "ทรัพย์สินดิจิทัล"),
+    ("assets_business", "กิจการ"), ("assets_valuables", "ของมีค่า"),
+    ("debt", "หนี้สิน"), ("guarantor", "ค้ำประกัน"),
+    ("insurance_life", "ประกันชีวิต"), ("insurance_health", "ประกันสุขภาพ"),
+    ("insurance_group", "ประกันกลุ่ม"), ("welfare", "สวัสดิการ"),
+    ("funeral_wishes", "ความปรารถนางานศพ"), ("emergency_cash_90days", "เงินฉุกเฉิน 90 วัน"),
+    ("estate_admin_cost", "ต้นทุนจัดการมรดก"), ("asset_distribution", "แผนแบ่งทรัพย์"),
+    ("debt_responsibility", "หนี้ใครรับผิดชอบ"), ("business_succession", "แผนกิจการ"),
+    ("urgent_manager", "ผู้จัดการฉุกเฉิน"), ("estate_executor", "ผู้จัดการมรดก"),
+    ("financial_poa", "Financial POA"), ("living_will", "Living Will"),
+    ("surviving_spouse_plan", "แผนคู่สมรสที่รอดชีวิต"),
+    ("guardian_primary", "Guardian หลัก"), ("guardian_backup", "Guardian สำรอง"),
+    ("money_guardian_primary", "Money Guardian หลัก"),
+    ("money_guardian_backup", "Money Guardian สำรอง"),
+    ("documents_location", "ที่อยู่เอกสาร"),
+    ("letter_to_children", "จดหมายถึงลูก"), ("letter_to_spouse", "จดหมายถึงคู่สมรส"),
+]
+
 
 def fill(h):
     return PatternFill("solid", start_color=h, end_color=h)
@@ -78,36 +106,28 @@ def build_prompt(data):
     lines = [
         "คุณคือผู้ช่วยของคุณพยัต นักวางแผนการเงินและกฎหมาย",
         "",
-        "รับข้อมูลลูกค้า แล้ว output 2 ส่วน คั่นด้วย ---SPLIT---",
+        "รับข้อมูลลูกค้า แล้ว output 2 ส่วน โดยมี ---SPLIT--- คั่นกลาง",
         "",
-        "===== ส่วนที่ 1 =====",
-        "",
-        "Block A — เรื่องราวลูกค้า",
+        "ส่วนที่ 1 — เรื่องราวลูกค้า",
         "เล่าเรื่องต่อเนื่อง 3-5 ย่อหน้า ภาษาไทยธรรมดา อ่านเข้าใจง่าย",
         "ครอบคลุมทุก field ที่มีข้อมูล ข้ามข้อมูลที่เป็น ไม่มี หรือ ไม่ได้ระบุ",
         "",
-        "Block B — ข้อมูลรายช่อง",
-        "แสดงทุก field รูปแบบ ชื่อ: ค่า ทีละบรรทัด",
-        "",
         "จากนั้นพิมพ์ ---SPLIT--- แล้วตามด้วยส่วนที่ 2 ทันที",
         "",
-        "===== ส่วนที่ 2 =====",
+        "ส่วนที่ 2 — JSON array เท่านั้น ไม่มีข้อความอื่น ไม่มี markdown",
         "",
-        "ประเมิน 12 ประเด็นตามลำดับนี้เท่านั้น",
-        "output เป็น JSON array เท่านั้น ไม่มีข้อความอื่น ไม่มี markdown",
-        "",
-        "ประเด็น:",
-        "1. เงินจัดการงานศพ เรื่อง และเอกสารที่เกี่ยวข้อง",
-        "2. เงินสดปรับตัว 6-12 เดือน และ จัดการหนี้",
+        "ประเมิน 12 ประเด็นตามลำดับนี้เท่านั้น:",
+        "1. เงินจัดการงานศพและเอกสารที่เกี่ยวข้อง",
+        "2. เงินสดปรับตัว 6-12 เดือน และจัดการหนี้",
         "3. ประกันชีวิตคุ้มครองรายได้ มูลค่าทางเศรษฐกิจตัวเอง",
         "4. ประกันโรคร้าย / ทุพพลภาพ / ประกันอุบัติเหตุ",
-        "5. คู่สมรสแต่งงานใหม่ I Love U Will",
-        "6. กรณีคู่สมรสตายก่อนหรือพร้อมกัน  Contingency Clause",
-        "7. Business Succession (ถ้ามี) เงินหมุนเวียนในกิจการ",
+        "5. คู่สมรสแต่งงานใหม่ I Love You Will",
+        "6. กรณีคู่สมรสตายก่อนหรือพร้อมกัน Contingency Clause",
+        "7. Business Succession และเงินหมุนเวียนในกิจการ",
         "8. ส่วนแบ่งประกันหนี้ส่วนเกิน",
         "9. Guardian of Person",
         "10. Money Guardian แยกจาก Guardian",
-        "11. ขั้นตอนหลังเกิดเหตุ จดหมายถึงผู้จัดการเรื่อง",
+        "11. ขั้นตอนหลังเกิดเหตุ และจดหมายถึงผู้จัดการเรื่อง",
         "12. จดหมายถึงลูกและคู่สมรส",
         "",
         "format:",
@@ -118,14 +138,13 @@ def build_prompt(data):
         "",
         "กฎ:",
         "- ไม่มีประกันชีวิตคุ้มครอง → ❌ ขาด",
-        "- ไม่มีเงินฉุกเฉิน 90 วัน → ❌ ขาด",
+        "- ไม่มีเงินฉุกเฉิน → ❌ ขาด",
         "- ไม่มี Contingency Clause → ❌ ขาด",
         "- Money Guardian = Guardian คนเดียวกัน → ⚠️ บางส่วน",
         "- กังวลคู่สมรสแต่งใหม่แต่ไม่มีแผน → ⚠️ บางส่วน",
         "- ไม่มี Money Guardian สำรอง → ⚠️ บางส่วน",
         "- field ไม่มีข้อมูล → ❌ ขาด",
-        "- ประเมินจากข้อมูลจริงเท่านั้น",
-        "- ใช้ บริบทและกฎหมายไทย",
+        "- ประเมินจากข้อมูลจริงและบริบทกฎหมายไทยเท่านั้น",
         "",
         "ข้อมูลลูกค้า:",
         data_str,
@@ -142,21 +161,21 @@ def call_claude(data):
         messages=[{"role": "user", "content": prompt}]
     )
     result = response.content[0].text
-    print(f"DEBUG result[:300]: {result[:300]}")
+    print(f"DEBUG result[:200]: {result[:200]}")
 
     if "---SPLIT---" not in result:
-        print(f"DEBUG no split found: {result[:500]}")
+        print(f"DEBUG no split: {result[:500]}")
         raise ValueError("ไม่พบ ---SPLIT---")
 
     part1, part2 = result.split("---SPLIT---", 1)
     part2 = part2.strip()
-    print(f"DEBUG part2[:300]: {part2[:300]}")
+    print(f"DEBUG part2[:200]: {part2[:200]}")
 
     start = part2.find("[")
     end = part2.rfind("]") + 1
 
     if start == -1 or end == 0:
-        print(f"DEBUG no json found: {part2}")
+        print(f"DEBUG no json: {part2}")
         raise ValueError("ไม่พบ JSON array")
 
     issues = json.loads(part2[start:end])
@@ -166,7 +185,7 @@ def call_claude(data):
 def build_workbook(data, story, issues):
     wb = Workbook()
 
-    # Tab 1
+    # ── Tab 1: เรื่องราว ──────────────────────────────────────────────
     ws1 = wb.active
     ws1.title = "1 เรื่องราว"
     ws1.sheet_view.showGridLines = False
@@ -182,11 +201,9 @@ def build_workbook(data, story, issues):
     c.border = thin(NAVY)
     ws1.merge_cells("A1:B1")
 
-    blocks = story.split("Block B")
-    block_a = blocks[0].replace("Block A —", "").replace("Block A—", "").strip()
-    block_b = blocks[1].strip() if len(blocks) > 1 else ""
-
     row = 2
+
+    # Block A — เรื่องราว
     ws1.row_dimensions[row].height = 18
     c = ws1.cell(row=row, column=1, value="เรื่องราวลูกค้า")
     c.fill = fill(MGRAY)
@@ -196,19 +213,20 @@ def build_workbook(data, story, issues):
     ws1.merge_cells(f"A{row}:B{row}")
     row += 1
 
-    for para in block_a.split("\n"):
-        para = para.strip()
+    for para in story.split("\n"):
+        para = para.strip().lstrip("#").lstrip("*").strip()
         if not para:
             continue
-    ws1.row_dimensions[row].height = 60
-    c = ws1.cell(row=row, column=1, value=para)
-    c.fill = fill(LGRAY)
-    c.font = fnt(size=10)
-    c.alignment = cal()
-    c.border = thin()
-    ws1.merge_cells(f"A{row}:B{row}")
-    row += 1
+        ws1.row_dimensions[row].height = 60
+        c = ws1.cell(row=row, column=1, value=para)
+        c.fill = fill(LGRAY)
+        c.font = fnt(size=10)
+        c.alignment = cal()
+        c.border = thin()
+        ws1.merge_cells(f"A{row}:B{row}")
+        row += 1
 
+    # Block B — ข้อมูลรายช่อง
     ws1.row_dimensions[row].height = 18
     c = ws1.cell(row=row, column=1, value="ข้อมูลรายช่อง")
     c.fill = fill(MGRAY)
@@ -217,51 +235,24 @@ def build_workbook(data, story, issues):
     c.border = thin(MGRAY)
     ws1.merge_cells(f"A{row}:B{row}")
     row += 1
-    
-    # ดึงจาก data dict โดยตรง
-    FIELD_LABELS = [
-        ("nickname", "ชื่อเล่น"), ("age", "อายุ"), ("gender", "เพศ"),
-        ("occupation", "อาชีพ"), ("health", "สุขภาพ"), ("email", "อีเมล"),
-        ("hobbies_and_risks", "งานอดิเรก"),
-        ("spouse_nickname", "คู่สมรส"), ("spouse_age", "อายุคู่สมรส"),
-        ("spouse_occupation", "อาชีพคู่สมรส"), ("spouse_income", "รายได้คู่สมรส"),
-        ("spouse_health", "สุขภาพคู่สมรส"), ("spouse_status", "สถานะ"),
-        ("children", "ลูก"), ("children_outside_marriage", "บุตรนอกสมรส"),
-        ("assets_cash", "เงินสด"), ("assets_property", "อสังหาริมทรัพย์"),
-        ("assets_investment", "การลงทุน"), ("assets_crypto_wallet", "คริปโต"),
-        ("assets_insurance_savings", "ประกันสะสม"), ("assets_digital", "ทรัพย์สินดิจิทัล"),
-        ("assets_business", "กิจการ"), ("assets_valuables", "ของมีค่า"),
-        ("debt", "หนี้สิน"), ("guarantor", "ค้ำประกัน"),
-        ("insurance_life", "ประกันชีวิต"), ("insurance_health", "ประกันสุขภาพ"),
-        ("insurance_group", "ประกันกลุ่ม"), ("welfare", "สวัสดิการ"),
-        ("funeral_wishes", "ความปรารถนางานศพ"), ("emergency_cash_90days", "เงินฉุกเฉิน 90 วัน"),
-        ("estate_admin_cost", "ต้นทุนจัดการมรดก"), ("asset_distribution", "แผนแบ่งทรัพย์"),
-        ("debt_responsibility", "หนี้ใครรับผิดชอบ"), ("business_succession", "แผนกิจการ"),
-        ("urgent_manager", "ผู้จัดการฉุกเฉิน"), ("estate_executor", "ผู้จัดการมรดก"),
-        ("financial_poa", "Financial POA"), ("living_will", "Living Will"),
-        ("surviving_spouse_plan", "แผนคู่สมรสที่รอดชีวิต"),
-        ("guardian_primary", "Guardian หลัก"), ("guardian_backup", "Guardian สำรอง"),
-        ("money_guardian_primary", "Money Guardian หลัก"),
-        ("money_guardian_backup", "Money Guardian สำรอง"),
-        ("documents_location", "ที่อยู่เอกสาร"),
-        ("letter_to_children", "จดหมายถึงลูก"), ("letter_to_spouse", "จดหมายถึงคู่สมรส"),
-    ]
 
-for key, label in FIELD_LABELS:
-    val = data.get(key, "")
-    if not val or val in ("ไม่มี", "ไม่ได้ระบุ", ""):
-        continue
-    ws1.row_dimensions[row].height = 30
-    put(ws1, row, 1, label, bg=LGRAY, bold=True, color="444444", size=9)
-    put(ws1, row, 2, val, size=10)
-    row += 1
+    for key, label in FIELD_LABELS:
+        val = data.get(key, "")
+        if not val or val in ("ไม่มี", "ไม่ได้ระบุ", ""):
+            continue
+        ws1.row_dimensions[row].height = 30
+        put(ws1, row, 1, label, bg=LGRAY, bold=True, color="444444", size=9)
+        put(ws1, row, 2, val, size=10)
+        row += 1
 
-    # Tab 2
+    ws1.freeze_panes = "A2"
+
+    # ── Tab 2: วิเคราะห์ ─────────────────────────────────────────────
     ws2 = wb.create_sheet("2 วิเคราะห์")
     ws2.sheet_view.showGridLines = False
     ws2.column_dimensions["A"].width = 5
     ws2.column_dimensions["B"].width = 12
-    ws2.column_dimensions["C"].width = 28
+    ws2.column_dimensions["C"].width = 30
     ws2.column_dimensions["D"].width = 36
     ws2.column_dimensions["E"].width = 30
     ws2.column_dimensions["F"].width = 14
@@ -277,9 +268,8 @@ for key, label in FIELD_LABELS:
     ws2.merge_cells("A1:H1")
 
     ws2.row_dimensions[2].height = 24
-    headers = [(1,"#"),(2,"หมวด"),(3,"ประเด็น"),(4,"ความเสี่ยง"),
-               (5,"แนะนำ"),(6,"สถานะ"),(7,"ความเห็นคุณพยัต"),(8,"Approve")]
-    for col, h in headers:
+    for col, h in [(1,"#"),(2,"หมวด"),(3,"ประเด็น"),(4,"ความเสี่ยง"),
+                   (5,"แนะนำ"),(6,"สถานะ"),(7,"ความเห็นคุณพยัต"),(8,"Approve")]:
         c = ws2.cell(row=2, column=col, value=h)
         c.fill = fill(BLUE)
         c.font = fnt(bold=True, size=9, color=WHITE)
@@ -314,7 +304,6 @@ for key, label in FIELD_LABELS:
         put(ws2, i, 8, "", bg=WHITE, align="center", size=12)
 
     ws2.freeze_panes = "A3"
-    ws1.freeze_panes = "A2"
 
     nickname = data.get("nickname", "ลูกค้า")
     date_str = datetime.now().strftime("%Y%m%d")
