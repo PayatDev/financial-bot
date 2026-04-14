@@ -14,7 +14,7 @@ from linebot.v3.webhooks import MessageEvent, TextMessageContent
 from linebot.v3.exceptions import InvalidSignatureError
 
 from config import LINE_CHANNEL_SECRET, LINE_CHANNEL_ACCESS_TOKEN
-from claude_service import chat
+from nong_plan import chat
 from session_store import get_history, update_history, clear_session
 from sheets_service import save_to_sheets
 
