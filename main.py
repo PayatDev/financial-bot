@@ -22,6 +22,8 @@ from email_service import notify_new_client
 from drive_service import get_drive_service
 from nong_draft import run as draft_run
 
+import threading
+
 app = FastAPI()
 
 configuration = Configuration(access_token=LINE_CHANNEL_ACCESS_TOKEN)
@@ -138,6 +140,7 @@ def handle_message(event: MessageEvent):
                     key, _, value = line.partition(": ")
                     data[key.strip()] = value.strip()
             save_to_sheets(user_id, data)
+            threading.Thread(target=draft_run, args=(data,), daemon=True).start()
             # บันทึก COMPLETED marker ไว้ใน history เพื่อให้คงอยู่หลัง restart
             COMPLETED_USERS[user_id] = True
             update_history(user_id, "user", user_message)
