@@ -359,7 +359,7 @@ def build_workbook(data, story, dynamic):
 
     for fixed in FIXED_ISSUES:
         i = fixed["ลำดับ"] + 2
-        ws2.row_dimensions[i].height = 54
+        ws2.row_dimensions[i].height = 85
         bg = WHITE if fixed["ลำดับ"] % 2 == 1 else LGRAY
         dyn = dyn_map.get(fixed["ลำดับ"], {})
         status = dyn.get("สถานะ", "❌ ขาด")
