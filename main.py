@@ -62,8 +62,8 @@ def test_drive():
 
 @app.get("/test-draft")
 def test_draft():
-    draft_run()
-    return {"status": "done"}
+    threading.Thread(target=draft_run, daemon=True).start()
+    return {"status": "started — ดู log ใน Railway"}
 
 @app.post("/webhook")
 async def webhook(request: Request):
