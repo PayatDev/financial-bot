@@ -12,7 +12,7 @@ from googleapiclient.discovery import build
 from drive_service import create_folder, upload_file_to_folder
 from email_service import notify_new_client
 
-DEV_MODE = False
+DEV_MODE = True
 
 SHEET_ID = os.environ.get("GOOGLE_SHEET_ID")
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
