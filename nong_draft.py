@@ -9,7 +9,7 @@ from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 
-from drive_service import upload_file
+from drive_service import create_folder, upload_file_to_folder
 from email_service import notify_new_client
 
 DEV_MODE = False
