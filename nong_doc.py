@@ -135,14 +135,22 @@ output เป็น JSON เท่านั้น ไม่มีข้อคว
 
     response = client.messages.create(
         model="claude-sonnet-4-20250514",
-        max_tokens=4000,
+        max_tokens=8000,
         messages=[{"role": "user", "content": prompt}]
     )
 
     text = response.content[0].text
-    print(f"DEBUG generate result[:300]: {text[:300]}")  # เพิ่มบรรทัดนี้
+    
+    # strip markdown fences
+    text = text.replace("```json", "").replace("```", "").strip()
+    
+    print(f"DEBUG cleaned[:300]: {text[:300]}")
+    
     start = text.find("[")
     end = text.rfind("]") + 1
+    if start == -1 or end == 0:
+        print(f"DEBUG no json: {text}")
+        raise ValueError("ไม่พบ JSON")
     result = json.loads(text[start:end])
     return {item["ลำดับ"]: item for item in result}
 
