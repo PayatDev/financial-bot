@@ -140,6 +140,7 @@ output เป็น JSON เท่านั้น ไม่มีข้อคว
     )
 
     text = response.content[0].text
+    print(f"DEBUG generate result[:300]: {text[:300]}")  # เพิ่มบรรทัดนี้
     start = text.find("[")
     end = text.rfind("]") + 1
     result = json.loads(text[start:end])
