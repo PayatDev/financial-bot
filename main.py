@@ -21,6 +21,7 @@ from sheets_service import save_to_sheets
 from email_service import notify_new_client
 from drive_service import get_drive_service
 from nong_draft import run as draft_run
+from nong_doc import run as doc_run
 
 import threading
 
@@ -65,6 +66,11 @@ def test_draft():
     threading.Thread(target=draft_run, daemon=True).start()
     return {"status": "started — ดู log ใน Railway"}
 
+@app.get("/run-doc")
+def run_doc(folder: str):
+    threading.Thread(target=doc_run, args=(folder,), daemon=True).start()
+    return {"status": "started", "folder": folder}
+
 @app.post("/webhook")
 async def webhook(request: Request):
     signature = request.headers.get("X-Line-Signature", "")
@@ -105,6 +111,13 @@ def is_completed(user_id: str) -> bool:
 def handle_message(event: MessageEvent):
     user_id = event.source.user_id
     user_message = event.message.text
+
+    # /doc command — ต้องอยู่ก่อน reset และก่อน completed check
+    if user_message.strip().startswith("/doc "):
+        folder_name = user_message.strip()[5:].strip()
+        threading.Thread(target=doc_run, args=(folder_name,), daemon=True).start()
+        reply_to_line(event, f"รับทราบครับ กำลังสร้างเอกสารสำหรับ {folder_name}\nรอสักครู่ แล้วจะแจ้งกลับครับ 📄")
+        return
 
     # reset command
     if user_message.strip().lower() in RESET_COMMANDS:
