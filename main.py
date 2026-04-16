@@ -38,8 +38,7 @@ COMPLETED_USERS: dict = {}
 CONTACT_MESSAGE = (
     "น้องแพลนมีหน้าที่เก็บข้อมูลเพียงอย่างเดียวครับ\n"
     "หากมีอะไรสอบถามเพิ่มเติม ติดต่อคุณพยัตได้เลยนะครับ 😊\n\n"
-    "📧 Email: payat.jira@gmail.com\n"
-    "📞 Call/Line: 080-524-6996"
+    "📧 Email: payat.jira@gmail.com"
 )
     
 @app.get("/")
