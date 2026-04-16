@@ -418,6 +418,3 @@ def run(data=None):
         folder_name=folder_name
     )
     print("เสร็จสิ้น")
-
-    os.unlink(local_path)
-    print("เสร็จสิ้น")
