@@ -380,7 +380,7 @@ def build_workbook(data, story, dynamic):
     ws2.freeze_panes = "A3"
 
     nickname = data.get("nickname", "ลูกค้า")
-    date_str = datetime.now().strftime("%Y%m%d")
+    date_str = datetime.now().strftime("%d%m%Y")  
     filename = f"{nickname}_{date_str}.xlsx"
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx")
     wb.save(tmp.name)
@@ -408,7 +408,8 @@ def run(data=None):
     print(f"สร้างไฟล์: {filename}")
 
     upload_file_to_folder(local_path, filename, folder_id)
-    os.unlink(local_path)
+    if os.path.exists(local_path):
+        os.unlink(local_path)
 
     notify_new_client(
         nickname=nickname,
