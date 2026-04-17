@@ -124,15 +124,21 @@ def generate_issue_content(client_data: dict, issues: list) -> dict:
 ข้อมูล 12 ประเด็น:
 {issues_text}
 
-สำหรับแต่ละประเด็น 1-12 ให้เขียน 2 ส่วน:
-(ใส่ "คุณ" นำหน้าชื่อลูกค้าเสมอ )
+สำหรับแต่ละประเด็น 1-12 ให้เขียน 2 ส่วน (ใส่ "คุณ" นำหน้าชื่อลูกค้าเสมอ):
 
-1. ย่อหน้าลูกค้า (2-3 ประโยค): สรุปวิธีจัดการปัญหานี้ของลูกค้าในปัจจุบันที่เกี่ยวกับประเด็นนี้ ใช้ชื่อจริง ตัวเลขจริง เป็นเรื่องราว ไม่ใช่หลักการทั่วไป
+1. ย่อหน้าลูกค้า (2-3 ประโยค):
+   - สรุปสถานการณ์จริงของลูกค้าที่เกี่ยวกับประเด็นนี้
+   - บอกว่าลูกค้าจัดการเรื่องนี้อยู่อย่างไรในปัจจุบัน
+   - ใช้ชื่อจริง ตัวเลขจริง เป็นเรื่องราว ไม่ใช่หลักการทั่วไป
+   - ถ้าลูกค้ายังไม่ได้จัดการอะไรเลย ให้บอกตรงๆ ว่ายังไม่มี
 
-2. ย่อหน้าสิ่งที่แนะนำ (2-3 ประโยค): สรุปจาก "ความเห็นคุณพยัต" ครบทุกประเด็น ให้อ่านง่าย กระชับ ใส่ตัวเลขถ้ามี
+2. ย่อหน้าคำแนะนำ (2-3 ประโยค):
+   - สรุปจาก "ความเห็นคุณพยัต" ให้ครบทุกประเด็นที่ระบุ
+   - ใส่ตัวเลขจริงถ้ามี
+   - อ่านง่าย กระชับ เป็นคำแนะนำที่ actionable
 
-output เป็น JSON เท่านั้น ไม่มีข้อความอื่น:
-[{{"ลำดับ": 1, "ย่อหน้าลูกค้า": "...", "ย่อหน้าสิ่งที่แนะนำ": "..."}}]"""
+output เป็น JSON เท่านั้น ไม่มีข้อความอื่น ไม่มี markdown:
+[{{"ลำดับ": 1, "ย่อหน้าลูกค้า": "...", "ย่อหน้าคำแนะนำ": "..."}}]"""
 
     response = client.messages.create(
         model="claude-sonnet-4-20250514",
@@ -245,7 +251,7 @@ def build_cover(client_data: dict, issues: list, generated: dict, folder_name: s
         title = ISSUE_TITLES.get(num, "")
         principle = GENERAL_PRINCIPLES.get(num, "")
         client_para = gen.get("ย่อหน้าลูกค้า", "")
-        current = gen.get("การจัดการในปัจจุบัน", "")
+        recommend = gen.get("ย่อหน้าคำแนะนำ", "")
 
         # Header row
         tbl = doc.add_table(rows=1, cols=2)
@@ -276,19 +282,19 @@ def build_cover(client_data: dict, issues: list, generated: dict, folder_name: s
             add_run(p2, client_para, size=15, color=RGBColor(0x22, 0x22, 0x22))
             p2.paragraph_format.space_after = Pt(4)
 
-        # กล่อง การจัดการในปัจจุบัน
-        if current:
+        # กล่องคำแนะนำ
+        if recommend:
             box = doc.add_table(rows=1, cols=1)
             box.style = "Table Grid"
             box_cell = box.cell(0, 0)
             set_cell_bg(box_cell, LIGHT_GRAY_HEX)
 
             bp1 = box_cell.paragraphs[0]
-            add_run(bp1, "การจัดการในปัจจุบัน", bold=True, size=14, color=NAVY_RGB)
+            add_run(bp1, "คำแนะนำจากคุณพยัต", bold=True, size=14, color=NAVY_RGB)  # เปลี่ยน label
             bp1.paragraph_format.space_before = Pt(4)
 
             bp2 = box_cell.add_paragraph()
-            add_run(bp2, current, size=14, color=RGBColor(0x33, 0x33, 0x33))
+            add_run(bp2, recommend, size=14, color=RGBColor(0x33, 0x33, 0x33))
             bp2.paragraph_format.space_after = Pt(4)
 
         doc.add_paragraph()
