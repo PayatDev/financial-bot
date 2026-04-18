@@ -14,6 +14,8 @@ from google.auth.transport.requests import Request
 from drive_service import get_drive_service, upload_file_to_folder
 from email_service import send_line_message
 
+from will_builder import build_will
+
 # ── หลักการทั่วไป 12 ประเด็น (hardcode) ──────────────────────────────
 GENERAL_PRINCIPLES = {
     1: "ทันทีที่เราจากไป โลกไม่ได้หยุดรอ มีค่าใช้จ่ายเกิดขึ้นภายในไม่กี่ชั่วโมง ทั้งรักษาพยาบาลครั้งสุดท้าย ค่าจัดการงานศพ ค่าธรรมเนียมแจ้งตาย ไปจนถึงค่าจ้างทนายดำเนินเรื่องต่างๆ สิ่งเหล่านี้ต้องใช้เงินสดทันที ถ้าเราไม่เตรียมการไว้ คนที่เรารักต้องควักเงินตัวเองจ่ายไปก่อน ในช่วงเวลาที่เจ็บปวดที่สุดในชีวิต",
@@ -342,10 +344,17 @@ def run(folder_name: str):
     nickname = client_data.get("ชื่อเล่น", folder_name.split("_")[0])
     cover_path = build_cover(client_data, issues, generated, folder_name)
     cover_filename = f"ใบปะหน้า_{nickname}.docx"
-
     upload_file_to_folder(cover_path, cover_filename, folder_id)
     if os.path.exists(cover_path):
         os.unlink(cover_path)
+
+    will_path     = build_will(client_data)
+    will_filename = f"พินัยกรรม_{nickname}.docx"
+    upload_file_to_folder(will_path, will_filename, folder_id)
+    if os.path.exists(will_path):
+        os.unlink(will_path)
+        
+    print(f"✅ {will_filename}")
 
     send_line_message(f"✅ เอกสารพร้อมแล้วครับ\n📁 {folder_name}\n📄 {cover_filename}")
     print("เสร็จสิ้น")
