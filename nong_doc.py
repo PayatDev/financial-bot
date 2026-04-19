@@ -15,6 +15,7 @@ from drive_service import get_drive_service, upload_file_to_folder
 from email_service import send_line_message
 
 from will_builder import build_will
+from poa_builder import build_poa
 
 # ── หลักการทั่วไป 12 ประเด็น (hardcode) ──────────────────────────────
 GENERAL_PRINCIPLES = {
@@ -353,6 +354,12 @@ def run(folder_name: str):
     upload_file_to_folder(will_path, will_filename, folder_id)
     if os.path.exists(will_path):
         os.unlink(will_path)
+
+    poa_path     = build_poa(client_data)
+    poa_filename = f"มอบอำนาจ_{nickname}.docx"
+    upload_file_to_folder(poa_path, poa_filename, folder_id)
+    if os.path.exists(poa_path):
+        os.unlink(poa_path)
         
     print(f"✅ {will_filename}")
 
