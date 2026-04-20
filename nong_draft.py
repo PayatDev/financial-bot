@@ -9,7 +9,7 @@ from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 
-from drive_service import create_folder, upload_file_to_folder
+from drive_service import upload_file
 from email_service import notify_new_client
 
 DEV_MODE = True
@@ -27,7 +27,6 @@ GREEN = "1A7A4A"
 RED   = "C0392B"
 AMBER = "D35400"
 
-# ── Fixed content col A B C ───────────────────────────────────────────
 FIXED_ISSUES = [
     {
         "ลำดับ": 1,
@@ -173,7 +172,7 @@ def get_data_from_sheets():
     return dict(zip(headers, row))
 
 
-def build_prompt(data):
+def build_story_prompt(data):
     data_str = json.dumps(data, ensure_ascii=False, indent=2)
     lines = [
         "คุณคือผู้ช่วยของคุณพยัต นักวางแผนการเงินและกฎหมาย",
@@ -202,33 +201,24 @@ def build_prompt(data):
         "11. ขั้นตอนหลังเกิดเหตุ และจดหมายถึงผู้จัดการเรื่อง",
         "12. จดหมายถึงลูกและคู่สมรส",
         "",
-        "format แต่ละรายการ:",
-        '[{"ลำดับ":1,"ประเด็น":"...","ค่าใช้จ่าย":"...","แนะนำ":"...","สถานะ":"..."}]',
+        'format: [{"ลำดับ":1,"ประเด็น":"...","ค่าใช้จ่าย":"...","แนะนำ":"...","สถานะ":"..."}]',
         "",
-        "สถานะ ใช้ได้: ❌ ขาด, ⚠️ บางส่วน, ✅ ครบ",
+        "สถานะ: ❌ ขาด, ⚠️ บางส่วน, ✅ ครบ",
         "",
-        "กฎประเมินสถานะ:",
+        "กฎ:",
         "- ไม่มีประกันชีวิตคุ้มครอง → ❌ ขาด",
         "- ไม่มีเงินฉุกเฉิน → ❌ ขาด",
         "- ไม่มี Contingency Clause → ❌ ขาด",
         "- Money Guardian = Guardian คนเดียวกัน → ⚠️ บางส่วน",
         "- กังวลคู่สมรสแต่งใหม่แต่ไม่มีแผน → ⚠️ บางส่วน",
         "- ไม่มี Money Guardian สำรอง → ⚠️ บางส่วน",
-        "- field ไม่มีข้อมูล → ❌ ขาด",
-        "- ประเมินจากข้อมูลจริงและบริบทกฎหมายไทยเท่านั้น",
-        "",
-        "กฎคำนวณค่าใช้จ่าย (ใช้ตัวเลขจริงจากข้อมูลลูกค้า):",
-        "- ข้อ 1: ค่างานศพ (ตามที่ลูกค้าระบุ) + ค่าดำเนินการ 50,000 บาท",
-        "- ข้อ 2: หนี้ทั้งหมด + รายได้ต่อปี (รายได้ต่อเดือน x 12)",
-        "- ข้อ 3: HLV = PV(rate=4%/12, nper=(60-อายุ)x12, pmt=รายได้ต่อเดือน) แสดงผลเป็นล้านบาท ปัดเศษ 1 ตำแหน่ง",
-        "- ข้อ 4: ใช้ตัวเลข HLV เดียวกับข้อ 3",
-        "- ข้อ 5: ไม่มีตัวเลข — พินัยกรรมช่วยได้",
-        "- ข้อ 6-12: ไม่มีตัวเลข — พินัยกรรมช่วยได้",
-        "- ทุกข้อที่มีตัวเลข ให้ใส่หมายเหตุ: (ประมาณการเบื้องต้น หากต้องการวางแผนละเอียดควรปรึกษานักวางแผนประกันภัย)",
-        "",
-        "กฎเขียนแนะนำ:",
-        "- สั้น กระชับ ไม่เกิน 2 ประโยค",
-        "- ตรงประเด็น ใช้ตัวเลขจริงจากข้อมูลลูกค้า",
+        "- ข้อ 1: ค่างานศพ × 1.5 เผื่อบานปลาย",
+        "- ข้อ 2: หนี้สุทธิ + (income_self+income_spouse)×12",
+        "- ข้อ 3: HLV = PV(4%/12,(60-age)×12,income_self,fv=0) แสดงเป็นล้าน",
+        "- ข้อ 4: ค่าใช้จ่ายกิจการ×6 (ถ้าไม่มีกิจการ → ไม่มีตัวเลข)",
+        "- ข้อ 5: TPD=HLV, CI=income_self×12",
+        "- ข้อ 6-12: ไม่มีตัวเลข",
+        "- ทุกข้อที่มีตัวเลข: ต่อท้ายด้วย (ประมาณการเบื้องต้น)",
         "",
         "ข้อมูลลูกค้า:",
         data_str,
@@ -236,39 +226,162 @@ def build_prompt(data):
     return "\n".join(lines)
 
 
+def build_col_g_prompt(data):
+    data_str = json.dumps(data, ensure_ascii=False, indent=2)
+    lines = [
+        "คุณคือผู้ช่วยของคุณพยัต นักวางแผนการเงินและกฎหมาย",
+        "",
+        "วิเคราะห์ข้อมูลลูกค้าและเขียนความเห็น Col G สำหรับทั้ง 12 ประเด็น",
+        "output เป็น JSON array เท่านั้น ไม่มีข้อความอื่น ไม่มี markdown",
+        "",
+        'format: [{"ลำดับ":1,"col_g":"..."},{"ลำดับ":2,"col_g":"..."},...]',
+        "",
+        "กฎทั่วไป:",
+        "- ภาษาไทยธรรมดา อ่านเข้าใจง่าย ใช้ตัวเลขจริงของลูกค้าตลอด",
+        "- ความยาวแต่ละ col_g ไม่เกิน 5 ประโยค",
+        "- ขึ้นต้นด้วยสถานะหรือสรุปก่อนเสมอ",
+        "",
+        "=" * 50,
+        "ประเด็น 1 — ค่าใช้จัดการเรื่องหลังเสียชีวิต",
+        "- ประเมินค่าใช้จ่ายเร่งด่วน × 1.5 เผื่อบานปลาย",
+        "- เทียบกับ เงินสด + สวัสดิการที่จ่ายเร็ว",
+        "- พอ → เตือน timing ประกัน 15 วัน + แนะนำระบุสิทธิเบิกธนาคารใน Will",
+        "- ไม่พอ → แนะนำประกันตลอดชีพแยกฉบับ ทุนตามที่ขาด",
+        "- NOTE ทุกเคส: ต้องมีคนทดรองเงิน / แยกผู้จัดการศพกับผู้ทดรองเงิน",
+        "",
+        "=" * 50,
+        "ประเด็น 2 — เงินสดปรับตัวและจัดการหนี้",
+        "- หนี้สุทธิ = หนี้ทั้งหมด - ประกันคุ้มครองหนี้โดยเฉพาะ",
+        "- Transition = (income_self + income_spouse) × 12",
+        "- Cash Need ป.2 = หนี้สุทธิ + Transition",
+        "- แจ้งตัวเลข Cash Need ป.2 และบอกจะรวมกับ HLV ป.3 ก่อนแนะนำประกัน",
+        "- NOTE: ไม่แนะนำขายทรัพย์สิน",
+        "",
+        "=" * 50,
+        "ประเด็น 3 — HLV ประกันชีวิต",
+        "- HLV = PV(4%/12, (60-age)×12, income_self, fv=0)",
+        "- Cash Need รวม = Cash Need ป.2 + HLV",
+        "- หัก ประกันชีวิตที่มี (ไม่รวมประกันคุ้มครองหนี้)",
+        "- หัก ทรัพย์สินสภาพคล่อง (เงินสด+หุ้น+กองทุน+ทอง+คริปโต) ยกเว้นอสังหาอาศัย",
+        "- ทุนที่ต้องทำเพิ่ม = Cash Need รวม - ที่หักไป",
+        "- แนะนำ Term10 ปรับลดทุกๆ10ปี หรือ Unit Linked",
+        "- ตรวจผู้รับประโยชน์ตรงกับ Will ไหม",
+        "- NOTE: ประมาณการหยาบๆ / คู่สมรสควรทำด้วย",
+        "",
+        "=" * 50,
+        "ประเด็น 4 — Business Succession",
+        "- ถ้าไม่มีกิจการ → 1 ประโยค: ไม่มีกิจการ ไม่เกี่ยวข้อง",
+        "- ถ้ามีกิจการ → Keyman = ค่าใช้จ่ายกิจการต่อเดือน × 6 แนะนำ Keyman Term",
+        "- มีหุ้นส่วน → แนะนำสัญญาซื้อขายหุ้นกรณีเสียชีวิต (ปรึกษาทนาย)",
+        "- จดทะเบียนบริษัท → แนะนำตั้งกรรมการที่ไว้ใจมีอำนาจลงนาม",
+        "",
+        "=" * 50,
+        "ประเด็น 5 — TPD/CI",
+        "- TPD = HLV (เงินก้อนสุดท้ายดูแลตนเองและครอบครัว)",
+        "- CI = income_self × 12 (ค่าใช้จ่ายนอกเหนือค่ารักษา)",
+        "- หักที่มีอยู่แล้ว แล้วแสดงส่วนที่ต้องทำเพิ่ม",
+        "- แนะนำพ่วง Rider กับประกันหลักป.3",
+        "",
+        "=" * 50,
+        "ประเด็น 6 — I Love You Will",
+        "- ดู surviving_spouse_plan",
+        "- กังวล+ไม่มีแผน → แนะนำแบ่ง Will 2 ส่วน: ให้คู่สมรส / ให้ลูกโดยตรง",
+        "- ไม่กังวล → แจ้งความเสี่ยงให้รับทราบ",
+        "",
+        "=" * 50,
+        "ประเด็น 7 — Contingency Clause",
+        "- ดู asset_distribution ว่ามีแผน B ไหม",
+        "- ไม่มี → แนะนำเพิ่มประโยคใน Will กรณีคู่สมรสตายก่อน/พร้อมกัน",
+        "- มี → ชม + แนะนำทบทวนชื่อสำรอง",
+        "",
+        "=" * 50,
+        "ประเด็น 8 — Guardian of Person",
+        "- ระบุชื่อใน Will ไหม? (guardian_primary)",
+        "- คุยกับ Guardian แล้วไหม? (ดู gaps_for_payat)",
+        "- มีตัวสำรองครอบคลุม 3 กรณีไหม? (guardian_backup)",
+        "- NOTE: Guardian ≠ Money Guardian อธิบายในป.9",
+        "",
+        "=" * 50,
+        "ประเด็น 9 — Money Guardian",
+        "- guardian_primary vs money_guardian_primary เดียวกันไหม?",
+        "- เดียวกัน → แนะนำแยกทันที",
+        "- มีตัวสำรองครอบคลุม 3 กรณีไหม? (money_guardian_backup)",
+        "- NOTE: Money Guardian รายงานศาลปีละครั้งตามกฎหมายไทย",
+        "",
+        "=" * 50,
+        "ประเด็น 10 — ป้องกันลูกใช้มรดกผิด",
+        "- คำนวณมรดกที่จะตกถึงลูก",
+        "- น้อยกว่า 5 ล้าน → 1 ประโยค: ยังไม่จำเป็น",
+        "- 5 ล้านขึ้นไป → เสนอ 2 ทางเลือก:",
+        "  A: ทยอยให้ใน Will อายุ 20/25/30/35 ส่วนละ 25%",
+        "  B: Settlement Option ให้บริษัทประกันทยอยจ่าย",
+        "",
+        "=" * 50,
+        "ประเด็น 11 — ขั้นตอนหลังเกิดเหตุ",
+        "- แจ้งว่าคุณพยัตจัดทำคู่มือให้เป็นส่วนหนึ่งของเอกสารชุดนี้",
+        "- แนะนำ review ทุกปี หรือเมื่อมีการเปลี่ยนแปลง",
+        "- ระบุที่อยู่เอกสาร (documents_location) ถ้ามี",
+        "",
+        "=" * 50,
+        "ประเด็น 12 — จดหมายถึงลูกและคู่สมรส",
+        "- ดู letter_to_spouse, letter_to_children",
+        "- มีแล้ว → ชม แนะนำทบทวนทุกปี",
+        "- ไม่มี → แนะนำเขียน: ความรัก เหตุผลใน Will คำแนะนำการใช้ชีวิต",
+        "- ระบุผู้นำส่ง (estate_executor) และที่เก็บ",
+        "",
+        "=" * 50,
+        "ข้อมูลลูกค้า:",
+        data_str,
+    ]
+    return "\n".join(lines)
+
+
 def call_claude(data):
-    prompt = build_prompt(data)
     client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
-    response = client.messages.create(
+
+    # Call 1: story + dynamic (D/E/F)
+    print("กำลังสร้างเรื่องราวและวิเคราะห์...")
+    r1 = client.messages.create(
         model="claude-sonnet-4-20250514",
         max_tokens=8000,
-        messages=[{"role": "user", "content": prompt}]
+        messages=[{"role": "user", "content": build_story_prompt(data)}]
     )
-    result = response.content[0].text
-    print(f"DEBUG result[:200]: {result[:200]}")
+    result1 = r1.content[0].text
 
-    if "---SPLIT---" not in result:
-        print(f"DEBUG no split: {result[:500]}")
+    if "---SPLIT---" not in result1:
         raise ValueError("ไม่พบ ---SPLIT---")
 
-    part1, part2 = result.split("---SPLIT---", 1)
+    part1, part2 = result1.split("---SPLIT---", 1)
     part2 = part2.strip()
-
     start = part2.find("[")
     end = part2.rfind("]") + 1
-
     if start == -1 or end == 0:
-        print(f"DEBUG no json: {part2}")
-        raise ValueError("ไม่พบ JSON array")
-
+        raise ValueError("ไม่พบ JSON array ในส่วนที่ 2")
     dynamic = json.loads(part2[start:end])
-    return part1.strip(), dynamic
+
+    # Call 2: Col G
+    print("กำลัง generate Col G...")
+    r2 = client.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=8000,
+        messages=[{"role": "user", "content": build_col_g_prompt(data)}]
+    )
+    result2 = r2.content[0].text.strip()
+    start2 = result2.find("[")
+    end2 = result2.rfind("]") + 1
+    if start2 == -1 or end2 == 0:
+        raise ValueError("ไม่พบ JSON array ใน Col G")
+    col_g_data = json.loads(result2[start2:end2])
+    col_g_map = {item.get("ลำดับ"): item.get("col_g", "") for item in col_g_data}
+
+    print(f"✅ story + {len(dynamic)} ประเด็น + {len(col_g_data)} Col G")
+    return part1.strip(), dynamic, col_g_map
 
 
-def build_workbook(data, story, dynamic):
+def build_workbook(data, story, dynamic, col_g_map):
     wb = Workbook()
 
-    # ── Tab 1: เรื่องราว ──────────────────────────────────────────────
+    # ── Tab 1 ──────────────────────────────────────────────────────────
     ws1 = wb.active
     ws1.title = "1 เรื่องราว"
     ws1.sheet_view.showGridLines = False
@@ -278,15 +391,11 @@ def build_workbook(data, story, dynamic):
     ws1.row_dimensions[1].height = 32
     c = ws1.cell(row=1, column=1,
         value=f"{data.get('nickname','')} | {data.get('occupation','')} | {data.get('age','')} ปี")
-    c.fill = fill(NAVY)
-    c.font = fnt(bold=True, size=13, color=WHITE)
-    c.alignment = cal()
-    c.border = thin(NAVY)
+    c.fill = fill(NAVY); c.font = fnt(bold=True, size=13, color=WHITE)
+    c.alignment = cal(); c.border = thin(NAVY)
     ws1.merge_cells("A1:B1")
 
     row = 2
-
-    # Block A
     ws1.row_dimensions[row].height = 18
     c = ws1.cell(row=row, column=1, value="เรื่องราวลูกค้า")
     c.fill = fill(MGRAY); c.font = fnt(bold=True, size=10, color=NAVY)
@@ -305,7 +414,6 @@ def build_workbook(data, story, dynamic):
         ws1.merge_cells(f"A{row}:B{row}")
         row += 1
 
-    # Block B
     ws1.row_dimensions[row].height = 18
     c = ws1.cell(row=row, column=1, value="ข้อมูลรายช่อง")
     c.fill = fill(MGRAY); c.font = fnt(bold=True, size=10, color=NAVY)
@@ -324,7 +432,7 @@ def build_workbook(data, story, dynamic):
 
     ws1.freeze_panes = "A2"
 
-    # ── Tab 2: วิเคราะห์ ─────────────────────────────────────────────
+    # ── Tab 2 ──────────────────────────────────────────────────────────
     ws2 = wb.create_sheet("2 วิเคราะห์")
     ws2.sheet_view.showGridLines = False
     ws2.column_dimensions["A"].width = 5
@@ -333,7 +441,7 @@ def build_workbook(data, story, dynamic):
     ws2.column_dimensions["D"].width = 28
     ws2.column_dimensions["E"].width = 28
     ws2.column_dimensions["F"].width = 12
-    ws2.column_dimensions["G"].width = 32
+    ws2.column_dimensions["G"].width = 36
 
     ws2.row_dimensions[1].height = 32
     c = ws2.cell(row=1, column=1, value="วิเคราะห์ช่องว่าง")
@@ -343,7 +451,7 @@ def build_workbook(data, story, dynamic):
 
     ws2.row_dimensions[2].height = 24
     for col, h in [(1,"#"),(2,"อธิบาย"),(3,"กรณีไม่จัดการ"),
-                   (4,"ค่าใช้จ่ายประมาณการ"),(5,"แนะนำ"),(6,"สถานะ"),(7,"ความเห็นคุณพยัต")]:
+                   (4,"ค่าใช้จ่ายประมาณการ"),(5,"แนะนำ"),(6,"สถานะ"),(7,"ความเห็นคุณพยัต (draft)")]:
         c = ws2.cell(row=2, column=col, value=h)
         c.fill = fill(BLUE); c.font = fnt(bold=True, size=9, color=WHITE)
         c.alignment = cal("center"); c.border = thin(WHITE)
@@ -354,7 +462,6 @@ def build_workbook(data, story, dynamic):
         "✅ ครบ":      ("E8F5EE", GREEN),
     }
 
-    # map dynamic data by ลำดับ
     dyn_map = {d.get("ลำดับ"): d for d in dynamic}
 
     for fixed in FIXED_ISSUES:
@@ -375,12 +482,18 @@ def build_workbook(data, story, dynamic):
         c.fill = fill(st_bg); c.font = fnt(bold=True, size=10, color=st_fg)
         c.alignment = cal("center"); c.border = thin(st_fg)
 
-        put(ws2, i, 7, "", bg=LYELL, size=10)
+        # Col G — AI draft สีแดง คุณพยัตแก้ทีหลัง
+        col_g_text = col_g_map.get(fixed["ลำดับ"], "")
+        c7 = ws2.cell(row=i, column=7, value=col_g_text)
+        c7.fill = fill("FFF8F8")
+        c7.font = Font(name="Arial", size=9, color=RED, italic=True)
+        c7.alignment = cal()
+        c7.border = thin(RED)
 
     ws2.freeze_panes = "A3"
 
     nickname = data.get("nickname", "ลูกค้า")
-    date_str = datetime.now().strftime("%d%m%Y")  
+    date_str = datetime.now().strftime("%Y%m%d")
     filename = f"{nickname}_{date_str}.xlsx"
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx")
     wb.save(tmp.name)
@@ -388,33 +501,24 @@ def build_workbook(data, story, dynamic):
 
 
 def run(data=None):
-    if DEV_MODE or data is None:
+    if DEV_MODE and data is None:
         print("DEV MODE — ดึงข้อมูลจาก Sheets")
         data = get_data_from_sheets()
 
     print(f"ข้อมูล: {data.get('nickname')} | {data.get('occupation')} | {data.get('age')} ปี")
-    print("กำลังวิเคราะห์...")
 
-    story, dynamic = call_claude(data)
-    print(f"ได้ {len(dynamic)} ประเด็น")
+    story, dynamic, col_g_map = call_claude(data)
 
-    nickname = data.get("nickname", "ลูกค้า")
-    date_str = datetime.now().strftime("%d%m%Y")
-    folder_name = f"{nickname}_{date_str}"
-
-    folder_id = create_folder(folder_name)
-
-    local_path, filename = build_workbook(data, story, dynamic)
+    local_path, filename = build_workbook(data, story, dynamic, col_g_map)
     print(f"สร้างไฟล์: {filename}")
 
-    upload_file_to_folder(local_path, filename, folder_id)
-    if os.path.exists(local_path):
-        os.unlink(local_path)
+    upload_file(local_path, filename)
 
     notify_new_client(
-        nickname=nickname,
+        nickname=data.get("nickname", ""),
         occupation=data.get("occupation", ""),
-        age=data.get("age", ""),
-        folder_name=folder_name
+        age=data.get("age", "")
     )
+
+    os.unlink(local_path)
     print("เสร็จสิ้น")
