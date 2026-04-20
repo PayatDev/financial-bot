@@ -440,18 +440,17 @@ def build_workbook(data, story, dynamic, col_g_map):
     ws2.column_dimensions["C"].width = 36
     ws2.column_dimensions["D"].width = 28
     ws2.column_dimensions["E"].width = 28
-    ws2.column_dimensions["F"].width = 12
-    ws2.column_dimensions["G"].width = 36
-
+    ws2.column_dimensions["F"].width = 40
+    
     ws2.row_dimensions[1].height = 32
     c = ws2.cell(row=1, column=1, value="วิเคราะห์ช่องว่าง")
     c.fill = fill(NAVY); c.font = fnt(bold=True, size=13, color=WHITE)
     c.alignment = cal(); c.border = thin(NAVY)
-    ws2.merge_cells("A1:G1")
+    ws2.merge_cells("A1:F1")
 
     ws2.row_dimensions[2].height = 24
-    for col, h in [(1,"#"),(2,"อธิบาย"),(3,"กรณีไม่จัดการ"),
-                   (4,"ค่าใช้จ่ายประมาณการ"),(5,"แนะนำ"),(6,"สถานะ"),(7,"ความเห็นคุณพยัต (draft)")]:
+    for col, h in [(1,"#"),(2,"อธิบาย"),(3,"กรณีไม่จัดการ"), 
+                   (4,"ค่าใช้จ่ายประมาณการ"),(5,"สถานะ"),(6,"ความเห็นคุณพยัต (draft)")]:
         c = ws2.cell(row=2, column=col, value=h)
         c.fill = fill(BLUE); c.font = fnt(bold=True, size=9, color=WHITE)
         c.alignment = cal("center"); c.border = thin(WHITE)
@@ -476,19 +475,18 @@ def build_workbook(data, story, dynamic, col_g_map):
         put(ws2, i, 2, fixed["อธิบาย"], bg=bg, color="333333", size=9)
         put(ws2, i, 3, fixed["กรณีไม่จัดการ"], bg=bg, color="444444", size=9, italic=True)
         put(ws2, i, 4, dyn.get("ค่าใช้จ่าย", ""), bg=bg, color=NAVY, size=9)
-        put(ws2, i, 5, dyn.get("แนะนำ", ""), bg=bg, bold=True, color=GREEN, size=9)
 
-        c = ws2.cell(row=i, column=6, value=status)
+        c = ws2.cell(row=i, column=5, value=status)
         c.fill = fill(st_bg); c.font = fnt(bold=True, size=10, color=st_fg)
         c.alignment = cal("center"); c.border = thin(st_fg)
 
         # Col G — AI draft สีแดง คุณพยัตแก้ทีหลัง
         col_g_text = col_g_map.get(fixed["ลำดับ"], "")
-        c7 = ws2.cell(row=i, column=7, value=col_g_text)
-        c7.fill = fill("FFF8F8")
-        c7.font = Font(name="Arial", size=9, color=RED, italic=True)
-        c7.alignment = cal()
-        c7.border = thin(RED)
+        c6 = ws2.cell(row=i, column=6, value=col_g_text)
+        c6.fill = fill("FFF8F8")
+        c6.font = Font(name="Arial", size=9, color=RED, italic=True)
+        c6.alignment = cal()
+        c6.border = thin(RED)
 
     ws2.freeze_panes = "A3"
 
