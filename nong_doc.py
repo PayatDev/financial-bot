@@ -17,6 +17,7 @@ from email_service import send_line_message
 from will_builder import build_will
 from poa_builder import build_poa
 from living_will_builder import build_living_will
+from emergency_guide_builder import build_emergency_guide
 
 # ── หลักการทั่วไป 12 ประเด็น (hardcode) ──────────────────────────────
 GENERAL_PRINCIPLES = {
@@ -370,6 +371,12 @@ def run(folder_name: str):
     upload_file_to_folder(lw_path, lw_filename, folder_id)
     if os.path.exists(lw_path):
         os.unlink(lw_path)
+
+    guide_path     = build_emergency_guide(client_data)
+    guide_filename = f"คู่มือฉุกเฉิน_{nickname}.docx"
+    upload_file_to_folder(guide_path, guide_filename, folder_id)
+    if os.path.exists(guide_path):
+        os.unlink(guide_path)
         
     print(f"✅ {will_filename}")
 
