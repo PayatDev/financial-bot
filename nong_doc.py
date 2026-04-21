@@ -111,7 +111,7 @@ def generate_issue_content(client_data: dict, issues: list) -> dict:
     client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
 
     issues_text = "\n".join([
-        f"ประเด็นที่ {i['ลำดับ']}: สถานะ={i['สถานะ']} | แนะนำ={i['แนะนำ']} | ความเห็นคุณพยัต={i['ความเห็นคุณพยัต']}"
+        f"ประเด็นที่ {i['ลำดับ']}: สถานะ={i['สถานะ']} | ความเห็นคุณพยัต={i['ความเห็นคุณพยัต']}"
         for i in issues
     ])
 
