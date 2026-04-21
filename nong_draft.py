@@ -12,6 +12,8 @@ from googleapiclient.discovery import build
 from drive_service import create_folder, upload_file_to_folder
 from email_service import notify_new_client
 
+from nong_doc import run as doc_run
+
 DEV_MODE = True
 
 SHEET_ID = os.environ.get("GOOGLE_SHEET_ID")
@@ -516,13 +518,8 @@ def run(data=None):
     print(f"สร้างไฟล์: {filename}")
 
     upload_file_to_folder(local_path, filename, folder_id)
-
     if os.path.exists(local_path):
         os.unlink(local_path)
 
-    notify_new_client(
-        nickname=nickname,
-        occupation=data.get("occupation", ""),
-        age=data.get("age", "")
-    )
-    print("เสร็จสิ้น")
+    print(f"✅ xlsx พร้อม → เริ่มสร้างเอกสาร")
+    doc_run(folder_name)  # ← ส่งต่อทันที
