@@ -507,16 +507,22 @@ def run(data=None):
 
     story, dynamic, col_g_map = call_claude(data)
 
+    nickname = data.get("nickname", "ลูกค้า")
+    date_str = datetime.now().strftime("%d%m%Y")
+    folder_name = f"{nickname}_{date_str}"
+    folder_id = create_folder(folder_name)
+
     local_path, filename = build_workbook(data, story, dynamic, col_g_map)
     print(f"สร้างไฟล์: {filename}")
 
-    upload_file(local_path, filename)
+    upload_file_to_folder(local_path, filename, folder_id)
+
+    if os.path.exists(local_path):
+        os.unlink(local_path)
 
     notify_new_client(
-        nickname=data.get("nickname", ""),
+        nickname=nickname,
         occupation=data.get("occupation", ""),
         age=data.get("age", "")
     )
-
-    os.unlink(local_path)
     print("เสร็จสิ้น")
