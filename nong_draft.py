@@ -491,7 +491,7 @@ def build_workbook(data, story, dynamic, col_g_map):
     ws2.freeze_panes = "A3"
 
     nickname = data.get("nickname", "ลูกค้า")
-    date_str = datetime.now().strftime("%Y%m%d")
+    date_str = datetime.now().strftime("%d%m%Y")
     filename = f"{nickname}_{date_str}.xlsx"
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx")
     wb.save(tmp.name)
