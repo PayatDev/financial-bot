@@ -16,6 +16,7 @@ from email_service import send_line_message
 
 from will_builder import build_will
 from poa_builder import build_poa
+from living_will_builder import build_living_will
 
 # ── หลักการทั่วไป 12 ประเด็น (hardcode) ──────────────────────────────
 GENERAL_PRINCIPLES = {
@@ -363,6 +364,12 @@ def run(folder_name: str):
     upload_file_to_folder(poa_path, poa_filename, folder_id)
     if os.path.exists(poa_path):
         os.unlink(poa_path)
+
+    lw_path     = build_living_will(client_data)
+    lw_filename = f"แสดงเจตนา_{nickname}.docx"
+    upload_file_to_folder(lw_path, lw_filename, folder_id)
+    if os.path.exists(lw_path):
+        os.unlink(lw_path)
         
     print(f"✅ {will_filename}")
 
