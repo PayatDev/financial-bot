@@ -24,7 +24,7 @@ def send_line_message(text: str):
     print(f"✅ LINE sent → {PAYAT_USER_ID}")
 
 
-def notify_new_client(nickname: str, occupation: str, age: str, folder_name=folder_name, folder_name: str = ""):
+def notify_new_client(nickname: str, occupation: str, age: str, folder_name=folder_name):
     text = (
         f"🆕 ลูกค้าใหม่ครับ\n\n"
         f"ชื่อ: {nickname}\n"
