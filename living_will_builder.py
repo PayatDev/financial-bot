@@ -132,6 +132,24 @@ def _no_border(cell):
         tcBdr.append(el)
     tcPr.append(tcBdr)
 
+def _no_table_border(tbl):
+    tbl_elem = tbl._tbl
+    tblPr = tbl_elem.find(qn("w:tblPr"))
+    if tblPr is None:
+        tblPr = OxmlElement("w:tblPr")
+        tbl_elem.insert(0, tblPr)
+    tblBdr = OxmlElement("w:tblBorders")
+    for side in ["top", "left", "bottom", "right", "insideH", "insideV"]:
+        el = OxmlElement(f"w:{side}")
+        el.set(qn("w:val"), "none")
+        el.set(qn("w:sz"), "0")
+        el.set(qn("w:color"), "auto")
+        tblBdr.append(el)
+    old = tblPr.find(qn("w:tblBorders"))
+    if old is not None:
+        tblPr.remove(old)
+    tblPr.append(tblBdr)
+
 def _sig_table(doc, pairs, sz=12, sb=8):
     n_cols    = len(pairs)
     TOTAL     = 9000
@@ -146,6 +164,7 @@ def _sig_table(doc, pairs, sz=12, sb=8):
     n_tc = len(col_widths)
     tbl  = doc.add_table(rows=3, cols=n_tc)
     tbl.style = "Table Grid"
+    _no_table_border(tbl)
 
     for i, w in enumerate(col_widths):
         for row in tbl.rows:
@@ -216,7 +235,7 @@ def build_lw_docx(client_data: dict, intent: str) -> str:
 
     doc = Document()
     for section in doc.sections:
-        section.top_margin    = Inches(0.984)   # 2.5 cm
+        section.top_margin    = Inches(0.787)   # 2.0 cm
         section.bottom_margin = Inches(0.787)   # 2.0 cm
         section.left_margin   = Inches(1.181)   # 3.0 cm
         section.right_margin  = Inches(0.787)   # 2.0 cm
@@ -225,10 +244,10 @@ def build_lw_docx(client_data: dict, intent: str) -> str:
     _p(doc, "หนังสือแสดงเจตนาเกี่ยวกับการรักษาพยาบาล",
        sz=20, bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, sa=3)
     _p(doc, "ตามมาตรา ๑๒ แห่งพระราชบัญญัติสุขภาพแห่งชาติ พ.ศ. ๒๕๕๐",
-       sz=12, color=GRAY, align=WD_ALIGN_PARAGRAPH.CENTER, sa=12)
+       sz=12, color=GRAY, align=WD_ALIGN_PARAGRAPH.CENTER, sa=8)
 
-    _p(doc, "ทำที่ [ที่อยู่จัดทำเอกสาร]", sa=2)
-    _p(doc, "วันที่ [วันที่ทำหนังสือ] เดือน [เดือน] พ.ศ. [ปี]", sa=8)
+    _p(doc, "ทำที่ [ที่อยู่จัดทำเอกสาร]", sa=1)
+    _p(doc, "วันที่ [วันที่ทำหนังสือ] เดือน [เดือน] พ.ศ. [ปี]", sa=6)
 
     # ── ข้อมูลผู้ทำหนังสือ ────────────────────────────────────────────
     _p(doc,
@@ -244,7 +263,7 @@ def build_lw_docx(client_data: dict, intent: str) -> str:
     _bullet(doc, "อยู่ในภาวะที่การรักษาไม่มีโอกาสทำให้กลับมาใช้ชีวิตได้อย่างมีคุณภาพ")
 
     # ── เจตนา ─────────────────────────────────────────────────────────
-    _head(doc, "เจตนาของข้าพเจ้า", sb=8, sa=4)
+    _head(doc, "เจตนาของข้าพเจ้า", sb=6, sa=3)
 
     if intent == "A":
         # แบบ ก — ไม่ยื้อ
@@ -269,7 +288,7 @@ def build_lw_docx(client_data: dict, intent: str) -> str:
            sa=4)
 
     # ── ผู้ตัดสินใจแทน ────────────────────────────────────────────────
-    _head(doc, "ผู้ตัดสินใจแทน", sb=8, sa=2)
+    _head(doc, "ผู้ตัดสินใจแทน", sb=6, sa=2)
     _p(doc,
        "หากข้าพเจ้าไม่สามารถแสดงเจตนาด้วยตนเองได้ ข้าพเจ้าขอมอบหมายให้ "
        "บุคคลต่อไปนี้เป็นผู้ตัดสินใจแทนตามเจตนาที่ระบุไว้", sa=4)
@@ -286,7 +305,7 @@ def build_lw_docx(client_data: dict, intent: str) -> str:
     _p(doc,
        "ข้าพเจ้าได้ทำหนังสือฉบับนี้ด้วยความสมัครใจ มีสติสัมปชัญญะสมบูรณ์ "
        "และขอให้แพทย์และบุคลากรทางการแพทย์ทุกท่านปฏิบัติตามเจตนาที่ระบุไว้",
-       sa=6)
+       sa=4)
 
     # ── ลายเซ็น ───────────────────────────────────────────────────────
     _sig_table(doc, [
@@ -307,7 +326,7 @@ def build_lw_docx(client_data: dict, intent: str) -> str:
        "e-livingwill.nationalhealth.or.th "
        "ระบบของสำนักงานคณะกรรมการสุขภาพแห่งชาติ ฟรี "
        "และโรงพยาบาลทั่วประเทศรู้จักระบบนี้",
-       sz=11, color=GRAY, sb=10, sa=0)
+       sz=11, color=GRAY, sb=6, sa=0)
 
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".docx")
     doc.save(tmp.name)
