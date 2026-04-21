@@ -71,6 +71,13 @@ def download_xlsx(folder_id: str) -> str:
     files = result.get("files", [])
     if not files:
         raise ValueError("ไม่พบ xlsx ใน folder")
+
+    # ── กรอง temp file ที่ Excel สร้างเมื่อเปิดค้างอยู่ ──
+    files = [f for f in files if not f["name"].startswith("~$")]
+
+    if not files:
+        raise ValueError("ไม่พบ xlsx จริงใน folder (มีแต่ temp file)")
+
     file_id = files[0]["id"]
     request = service.files().get_media(fileId=file_id)
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx")
