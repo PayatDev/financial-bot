@@ -87,25 +87,21 @@ def download_xlsx(folder_id: str) -> str:
 def read_xlsx(local_path: str) -> tuple[dict, list]:
     wb = load_workbook(local_path, data_only=True)
 
-    # Tab 1 — ข้อมูลรายช่อง
     ws1 = wb["1 เรื่องราว"]
     client_data = {}
     for row in ws1.iter_rows(values_only=True):
         if row[0] and row[1] and row[0] not in ("เรื่องราวลูกค้า", "ข้อมูลรายช่อง"):
-            # skip header rows and story paragraphs
             if isinstance(row[0], str) and len(row[0]) < 40:
                 client_data[row[0]] = row[1]
 
-    # Tab 2 — 12 ประเด็น
     ws2 = wb["2 วิเคราะห์"]
     issues = []
     for row in ws2.iter_rows(min_row=3, values_only=True):
-        if row[0] and isinstance(row[0], int):
+        if row[0] and str(row[0]).isdigit():   # ← แก้จาก isinstance int → str.isdigit()
             issues.append({
-                "ลำดับ": row[0],
-                "แนะนำ": row[4] or "",
-                "สถานะ": row[5] or "",
-                "ความเห็นคุณพยัต": row[6] or "",
+                "ลำดับ":           int(row[0]),
+                "สถานะ":           row[4] or "",   # ← col E (index 4)
+                "ความเห็นคุณพยัต": row[5] or "",   # ← col F (index 5)
             })
     return client_data, issues
 
