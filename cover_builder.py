@@ -117,7 +117,6 @@ output เป็น JSON เท่านั้น ไม่มีข้อคว
     )
 
     text = response.content[0].text.replace("```json", "").replace("```", "").strip()
-    print(f"DEBUG cover[:300]: {text[:300]}")
 
     start = text.find("[")
     end   = text.rfind("]") + 1
