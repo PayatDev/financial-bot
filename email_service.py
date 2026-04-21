@@ -23,15 +23,3 @@ def send_line_message(text: str):
     urllib.request.urlopen(req)
     print(f"✅ LINE sent → {PAYAT_USER_ID}")
 
-
-def notify_new_client(nickname: str, occupation: str, age: str, folder_name: str = ""):
-    text = (
-        f"🆕 ลูกค้าใหม่ครับ\n\n"
-        f"ชื่อ: {nickname}\n"
-        f"อาชีพ: {occupation}\n"
-        f"อายุ: {age} ปี\n\n"
-        f"📁 folder: {folder_name}\n\n"
-        f"กรอก col G ใน Tab 2 แล้วพิม\n"
-        f"/doc {folder_name}"
-    )
-    send_line_message(text)
