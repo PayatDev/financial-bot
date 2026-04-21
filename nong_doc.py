@@ -135,5 +135,14 @@ def run(folder_name: str):
         
     print(f"✅ {will_filename}")
 
-    send_line_message(f"✅ เอกสารพร้อมแล้วครับ\n📁 {folder_name}\n📄 {cover_filename}")
+    send_line_message(
+    f"🆕 ลูกค้าใหม่ครับ\n\n"
+    f"ชื่อ: คุณ{nickname}\n"
+    f"อาชีพ: {client_data.get('อาชีพ', '')}\n"
+    f"อายุ: {client_data.get('อายุ', '')} ปี\n"
+    f"📁 {folder_name}\n\n"
+    f"เอกสารทั้ง 5 ชิ้นพร้อมใน Drive แล้วครับ\n"
+    f"โปรดตรวจและแก้ไขก่อนส่งให้ลูกค้าทาง\n"
+    f"📧 {client_data.get('อีเมล', '[ยังไม่มีอีเมล]')}"
+    )
     print("เสร็จสิ้น")
