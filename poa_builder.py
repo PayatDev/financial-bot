@@ -95,6 +95,39 @@ def _no_border(cell):
         tcBdr.append(el)
     tcPr.append(tcBdr)
 
+def _no_table_border(tbl):
+    tbl_elem = tbl._tbl
+    tblPr = tbl_elem.find(qn("w:tblPr"))
+    if tblPr is None:
+        tblPr = OxmlElement("w:tblPr")
+        tbl_elem.insert(0, tblPr)
+    tblBdr = OxmlElement("w:tblBorders")
+    for side in ["top", "left", "bottom", "right", "insideH", "insideV"]:
+        el = OxmlElement(f"w:{side}")
+        el.set(qn("w:val"), "none")
+        el.set(qn("w:sz"), "0")
+        el.set(qn("w:color"), "auto")
+        tblBdr.append(el)
+    old = tblPr.find(qn("w:tblBorders"))
+    if old is not None:
+        tblPr.remove(old)
+    tblPr.append(tblBdr)
+
+def _no_table_border_OLD(tbl):
+    """ลบ border ระดับ table ทั้งหมด"""
+    tblPr = tbl._tbl.get_or_add_tblPr()
+    tblBdr = OxmlElement('w:tblBorders')
+    for side in ['top', 'left', 'bottom', 'right', 'insideH', 'insideV']:
+        el = OxmlElement(f'w:{side}')
+        el.set(qn('w:val'), 'none')
+        el.set(qn('w:sz'), '0')
+        el.set(qn('w:color'), 'auto')
+        tblBdr.append(el)
+    old = tblPr.find(qn('w:tblBorders'))
+    if old is not None:
+        tblPr.remove(old)
+    tblPr.append(tblBdr)
+
 def _sig_table(doc, pairs, sz=12, sb=8):
     """
     pairs = [(role, name_ph), ...]  1 หรือ 2 คน
@@ -113,6 +146,7 @@ def _sig_table(doc, pairs, sz=12, sb=8):
     n_tc = len(col_widths)
     tbl = doc.add_table(rows=3, cols=n_tc)
     tbl.style = "Table Grid"
+    _no_table_border(tbl)
 
     for i, w in enumerate(col_widths):
         for row in tbl.rows:
