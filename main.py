@@ -45,11 +45,6 @@ CONTACT_MESSAGE = (
 def root():
     return {"status": "Financial Bot is running! 🤖"}
 
-@app.get("/test-email")
-def test_email():
-    notify_new_client("พิม", "สัตวแพทย์", "35")
-    return {"status": "sent"}
-
 @app.get("/test-drive")
 def test_drive():
     service = get_drive_service()
