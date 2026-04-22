@@ -18,7 +18,6 @@ from nong_plan import chat
 from session_store import get_history, update_history, clear_session
 from sheets_service import save_to_sheets
 
-from email_service import notify_new_client
 from drive_service import get_drive_service
 from nong_draft import run as draft_run
 from nong_doc import run as doc_run
