@@ -141,6 +141,10 @@ def handle_message(event: MessageEvent):
             raw = bot_reply.split("[SAVE_DATA]")[1].split("[END_SAVE_DATA]")[0].strip()
     
             data = json.loads(raw)  # 🔥 จุดสำคัญ
+
+            # ✅ กันพัง
+            if not isinstance(data, dict):
+                raise ValueError("SAVE_DATA is not dict")
     
             save_to_sheets(user_id, data)
     
