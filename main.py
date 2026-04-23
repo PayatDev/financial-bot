@@ -139,12 +139,36 @@ def handle_message(event: MessageEvent):
         reply_text = bot_reply.split("[SAVE_DATA]")[0].strip()
         try:
             raw = bot_reply.split("[SAVE_DATA]")[1].split("[END_SAVE_DATA]")[0].strip()
+
+            raw = raw.replace("```json", "").replace("```", "").strip()
     
             data = json.loads(raw)  # 🔥 จุดสำคัญ
 
             # ✅ กันพัง
             if not isinstance(data, dict):
                 raise ValueError("SAVE_DATA is not dict")
+
+            EXPECTED_FIELDS = [
+                                "email", "nickname", "age", "gender", "occupation",
+                                "income_self", "spouse_nickname", "spouse_age",
+                                "spouse_occupation", "spouse_income", "spouse_health",
+                                "spouse_status", "children", "guardian_primary",
+                                "guardian_backup", "money_guardian_primary",
+                                "money_guardian_backup", "estate_executor",
+                                "urgent_manager", "asset_distribution",
+                                "surviving_spouse_plan", "debt_responsibility",
+                                "business_succession", "living_will", "financial_poa",
+                                "assets_cash", "assets_property", "assets_business",
+                                "assets_investment", "assets_insurance_savings",
+                                "insurance_life", "insurance_health", "insurance_group",
+                                "welfare", "assets_crypto_wallet", "assets_digital",
+                                "assets_valuables", "debt", "guarantor",
+                                "hobbies_and_risks", "emergency_cash_90days",
+                                "estate_admin_cost", "funeral_wishes",
+                                "documents_location", "health", "children_outside_marriage"
+                                ]
+
+            data = {k: data.get(k, "ไม่ได้ระบุ") for k in EXPECTED_FIELDS}
     
             save_to_sheets(user_id, data)
     
@@ -158,6 +182,7 @@ def handle_message(event: MessageEvent):
     
         except Exception as e:
             print(f"❌ JSON parse error: {e}")
+            print(f"RAW SAVE_DATA:\n{raw}")
             reply_text = "ขออภัยครับ ระบบบันทึกข้อมูลมีปัญหา กรุณาลองใหม่อีกครั้งนะครับ 🙏"
     
             update_history(user_id, "user", user_message)
