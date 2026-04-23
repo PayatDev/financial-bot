@@ -136,24 +136,26 @@ def handle_message(event: MessageEvent):
 
     # เช็ค SAVE_DATA
     if "[SAVE_DATA]" in bot_reply and "[END_SAVE_DATA]" in bot_reply:
-        # ตัด SAVE_DATA block ออกก่อนส่งลูกค้า
         reply_text = bot_reply.split("[SAVE_DATA]")[0].strip()
         try:
             raw = bot_reply.split("[SAVE_DATA]")[1].split("[END_SAVE_DATA]")[0].strip()
-            data = {}
-            for line in raw.splitlines():
-                if ": " in line:
-                    key, _, value = line.partition(": ")
-                    data[key.strip()] = value.strip()
+    
+            data = json.loads(raw)  # 🔥 จุดสำคัญ
+    
             save_to_sheets(user_id, data)
+    
             threading.Thread(target=draft_run, args=(data,), daemon=True).start()
-            # บันทึก COMPLETED marker ไว้ใน history เพื่อให้คงอยู่หลัง restart
+    
             COMPLETED_USERS[user_id] = True
             update_history(user_id, "user", user_message)
             update_history(user_id, "assistant", "[COMPLETED]")
+    
             print(f"✅ {user_id} complete — {data.get('nickname', '')}")
+    
         except Exception as e:
-            print(f"Error parsing SAVE_DATA: {e}")
+            print(f"❌ JSON parse error: {e}")
+            reply_text = "ขออภัยครับ ระบบบันทึกข้อมูลมีปัญหา กรุณาลองใหม่อีกครั้งนะครับ 🙏"
+    
             update_history(user_id, "user", user_message)
             update_history(user_id, "assistant", bot_reply)
     else:
