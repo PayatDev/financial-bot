@@ -104,31 +104,31 @@ def run(folder_name: str):
 
     nickname = client_data.get("ชื่อเล่น", folder_name.split("_")[0])
     cover_path = build_cover(client_data, issues, generated, folder_name)
-    cover_filename = f"ใบปะหน้า_{nickname}.docx"
+    cover_filename = f"1_แผนครอบครัว_คุณ{nickname}.docx"
     upload_file_to_folder(cover_path, cover_filename, folder_id)
     if os.path.exists(cover_path):
         os.unlink(cover_path)
 
     will_path     = build_will(client_data)
-    will_filename = f"พินัยกรรม_{nickname}.docx"
+    will_filename = f"2_พินัยกรรม_คุณ{nickname}.docx"
     upload_file_to_folder(will_path, will_filename, folder_id)
     if os.path.exists(will_path):
         os.unlink(will_path)
 
     poa_path     = build_poa(client_data)
-    poa_filename = f"มอบอำนาจ_{nickname}.docx"
+    poa_filename = f"3_หนังสือมอบอำนาจ_คุณ{nickname}.docx"
     upload_file_to_folder(poa_path, poa_filename, folder_id)
     if os.path.exists(poa_path):
         os.unlink(poa_path)
 
     lw_path     = build_living_will(client_data)
-    lw_filename = f"แสดงเจตนา_{nickname}.docx"
+    lw_filename = f"4_หนังสือแสดงเจตนาการยื้อชีวิต_คุณ{nickname}.docx"
     upload_file_to_folder(lw_path, lw_filename, folder_id)
     if os.path.exists(lw_path):
         os.unlink(lw_path)
 
     guide_path     = build_emergency_guide(client_data)
-    guide_filename = f"คู่มือฉุกเฉิน_{nickname}.docx"
+    guide_filename = f"5_คู่มือฉุกเฉิน_คุณ{nickname}.docx"
     upload_file_to_folder(guide_path, guide_filename, folder_id)
     if os.path.exists(guide_path):
         os.unlink(guide_path)
