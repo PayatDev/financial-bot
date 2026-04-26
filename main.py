@@ -31,6 +31,8 @@ handler = WebhookHandler(LINE_CHANNEL_SECRET)
 
 RESET_COMMANDS = ["/reset", "reset", "/เริ่มใหม่", "เริ่มใหม่"]
 
+MAX_TURNS = 80  # ป้องกันค่าใช้จ่ายบาน
+
 # เก็บสถานะ completed ใน memory + session store
 # key = user_id, value = True
 COMPLETED_USERS: dict = {}
@@ -127,6 +129,15 @@ def handle_message(event: MessageEvent):
 
     # สถานะที่ 1: กำลังสัมภาษณ์อยู่
     history = get_history(user_id)
+    
+    if len(history) >= MAX_TURNS * 2:
+        reply_to_line(event,
+            "ขออภัยครับ ผมขออนุญาตจบการสนทนานี้นะครับ\n"
+            "กรุณาติดต่อคุณพยัตโดยตรงนะครับ 😊\n\n"
+            "📧 payat.jira@gmail.com"
+        )
+        return
+        
     try:
         bot_reply = chat(user_id, history, user_message)
     except Exception as e:
