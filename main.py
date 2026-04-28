@@ -2,6 +2,7 @@
 
 import json, os
 from fastapi import FastAPI, Request, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from linebot.v3 import WebhookHandler
 from linebot.v3.messaging import (
     Configuration,
@@ -28,6 +29,13 @@ from pydantic import BaseModel
 import threading
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://payatdev.github.io"],
+    allow_methods=["POST", "GET"],
+    allow_headers=["Content-Type"],
+)
 
 configuration = Configuration(access_token=LINE_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(LINE_CHANNEL_SECRET)
