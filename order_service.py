@@ -3,7 +3,7 @@ import os
 from datetime import datetime
 from sheets_service import get_sheets_service  # ใช้ service เดิม
 
-ORDER_SHEET_ID = "17k78PfYW900DW6ngR2-VnWfklm2lwzlctLfSwridrUQ"
+ORDER_SHEET_ID = os.environ.get("ORDER_SHEET_ID")
 ORDER_SHEET_NAME = "Orders"
 
 def save_order(data: dict):
