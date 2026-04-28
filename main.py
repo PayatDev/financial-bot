@@ -22,6 +22,9 @@ from drive_service import get_drive_service
 from nong_draft import run as draft_run
 from nong_doc import run as doc_run
 
+from order_service import save_order
+from pydantic import BaseModel
+
 import threading
 
 app = FastAPI()
@@ -42,10 +45,27 @@ CONTACT_MESSAGE = (
     "หากมีอะไรสอบถามเพิ่มเติม ติดต่อคุณพยัตได้เลยนะครับ 😊\n\n"
     "📧 Email: payat.jira@gmail.com"
 )
+
+# เพิ่ม model
+class OrderData(BaseModel):
+    name: str
+    email: str
+    phone: str = ""
+    payment: str
+    note: str = ""
     
 @app.get("/")
 def root():
     return {"status": "Financial Bot is running! 🤖"}
+
+@app.post("/order")
+async def create_order(data: OrderData):
+    try:
+        save_order(data.dict())
+        return {"status": "ok"}
+    except Exception as e:
+        print(f"❌ Order error: {e}")
+        raise HTTPException(status_code=500, detail="บันทึกไม่สำเร็จ")
 
 @app.get("/test-drive")
 def test_drive():
