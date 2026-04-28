@@ -51,5 +51,8 @@ def save_order(data: dict):
         print(f"✅ Order saved: {data.get('name', '')}")
         return True
     except Exception as e:
+        import traceback
         print(f"❌ Order error: {e}")
+        traceback.print_exc()
         return False
+
