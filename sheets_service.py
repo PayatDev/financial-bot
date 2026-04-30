@@ -32,10 +32,6 @@ HEADERS = [
     "living_will", "surviving_spouse_plan",
     "guardian_primary", "guardian_backup",
     "money_guardian_primary", "money_guardian_backup",
-    "fullname_self", "fullname_spouse",
-    "fullname_executor", "fullname_executor_backup",
-    "fullname_guardian_primary", "fullname_guardian_backup",
-    "fullname_money_guardian_primary", "fullname_money_guardian_backup",
     "fullname_self", "id_self", "address_self",
     "fullname_spouse", "id_spouse",
     "fullname_children",
@@ -47,7 +43,6 @@ HEADERS = [
     "fullname_money_guardian_backup", "id_money_guardian_backup",
     "gaps_for_payat", "summary",
 ]
-
 
 def get_sheet():
     creds_json = os.environ.get("GOOGLE_CREDENTIALS_JSON")
