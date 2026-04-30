@@ -4,7 +4,10 @@
 import anthropic
 from config import ANTHROPIC_API_KEY
 
-client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+client = anthropic.Anthropic(
+    api_key=ANTHROPIC_API_KEY,
+    timeout=30.0
+)
 
 SYSTEM_PROMPT = """คุณคือ "น้องแพลน" ผู้ช่วยของคุณพยัต จิรสุวรรณพงศ์ นักวางแผนการเงิน
 
