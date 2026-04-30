@@ -95,6 +95,87 @@ def run_doc(folder: str):
     threading.Thread(target=doc_run, args=(folder,), daemon=True).start()
     return {"status": "started", "folder": folder}
 
+เพิ่มแค่ endpoint เดียวครับ ใส่ก่อน `@app.post("/webhook")` เลย
+
+
+@app.get("/force-save")
+def force_save():
+    """ทดสอบ save ลง sheet โดยไม่ต้องคุยกับน้องแพลน"""
+    test_data = {
+        "email": "test@test.com",
+        "nickname": "ทดสอบ",
+        "age": "35",
+        "gender": "ชาย",
+        "occupation": "พนักงานบริษัท",
+        "health": "ดี",
+        "income_self": "50,000 บาท/เดือน",
+        "hobbies_and_risks": "วิ่ง ดูหนัง",
+        "spouse_nickname": "แพลน",
+        "spouse_age": "32",
+        "spouse_occupation": "ครู",
+        "spouse_income": "30,000 บาท/เดือน",
+        "spouse_health": "ดี",
+        "spouse_status": "อยู่ด้วยกัน",
+        "children": "น้องทดสอบ 3 ขวบ สุขภาพดี",
+        "children_outside_marriage": "ไม่มี",
+        "assets_cash": "500,000 บาท",
+        "assets_property": "บ้าน 3 ล้าน ปลอดหนี้",
+        "assets_investment": "หุ้น 200,000 บาท",
+        "assets_crypto_wallet": "ไม่มี",
+        "assets_insurance_savings": "ไม่มี",
+        "assets_digital": "ไม่มี",
+        "assets_business": "ไม่มี",
+        "assets_valuables": "รถ 500,000 บาท",
+        "debt": "หนี้รถ 200,000 บาท",
+        "guarantor": "ไม่มี",
+        "insurance_life": "ประกันชีวิต 1 ล้าน",
+        "insurance_health": "ประกันสุขภาพเหมาจ่าย",
+        "insurance_group": "ไม่มี",
+        "welfare": "ประกันสังคม",
+        "funeral_wishes": "พิธีพุทธ งบ 100,000 บาท",
+        "emergency_cash_90days": "ใช้เงินออม",
+        "estate_admin_cost": "ใช้เงินออม",
+        "asset_distribution": "ให้ภรรยาทั้งหมด",
+        "debt_responsibility": "ภรรยารับผิดชอบ",
+        "business_succession": "ไม่มีกิจการ",
+        "urgent_manager": "พี่ชาย",
+        "estate_executor": "ภรรยา",
+        "documents_location": "ตู้เซฟที่บ้าน ภรรยารู้",
+        "financial_poa": "ภรรยา",
+        "living_will": "ไม่ยื้อชีวิต ภรรยาตัดสินใจ",
+        "surviving_spouse_plan": "ไม่กังวล",
+        "guardian_primary": "พี่ชาย ยินดี",
+        "guardian_backup": "น้องสาวภรรยา",
+        "money_guardian_primary": "น้องสาวภรรยา",
+        "money_guardian_backup": "ไม่ได้ระบุ",
+        "fullname_self": "ทดสอบ ระบบ",
+        "id_self": "1234567890123",
+        "address_self": "123 ถนนทดสอบ กรุงเทพ 10100",
+        "fullname_spouse": "แพลน ระบบ",
+        "id_spouse": "ไม่ได้ระบุ",
+        "fullname_children": "ทดสอบน้อย ระบบ",
+        "fullname_executor": "แพลน ระบบ",
+        "id_executor": "ไม่ได้ระบุ",
+        "fullname_executor_backup": "ไม่ได้ระบุ",
+        "id_executor_backup": "ไม่ได้ระบุ",
+        "fullname_guardian_primary": "พี่ชาย ระบบ",
+        "id_guardian_primary": "ไม่ได้ระบุ",
+        "fullname_guardian_backup": "ไม่ได้ระบุ",
+        "id_guardian_backup": "ไม่ได้ระบุ",
+        "fullname_money_guardian_primary": "ไม่ได้ระบุ",
+        "id_money_guardian_primary": "ไม่ได้ระบุ",
+        "fullname_money_guardian_backup": "ไม่ได้ระบุ",
+        "id_money_guardian_backup": "ไม่ได้ระบุ",
+        "gaps_for_payat": "ทดสอบระบบ",
+        "summary": "ข้อมูลทดสอบระบบ force-save"
+    }
+    result = save_to_sheets("test_force_save", test_data)
+    if result:
+        return {"status": "✅ บันทึกลง Sheet สำเร็จ"}
+    else:
+        return {"status": "❌ บันทึกไม่สำเร็จ ดู Railway logs"}
+        
+
 @app.post("/webhook")
 async def webhook(request: Request):
     signature = request.headers.get("X-Line-Signature", "")
