@@ -95,8 +95,6 @@ def run_doc(folder: str):
     threading.Thread(target=doc_run, args=(folder,), daemon=True).start()
     return {"status": "started", "folder": folder}
 
-เพิ่มแค่ endpoint เดียวครับ ใส่ก่อน `@app.post("/webhook")` เลย
-
 
 @app.get("/force-save")
 def force_save():
