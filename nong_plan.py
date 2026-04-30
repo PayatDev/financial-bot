@@ -4,10 +4,7 @@
 import anthropic
 from config import ANTHROPIC_API_KEY
 
-client = anthropic.Anthropic(
-    api_key=ANTHROPIC_API_KEY,
-    timeout=30.0
-)
+client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
 SYSTEM_PROMPT = """คุณคือ "น้องแพลน" ผู้ช่วยของคุณพยัต จิรสุวรรณพงศ์ นักวางแผนการเงิน
 
@@ -520,7 +517,7 @@ def chat(user_id: str, history: list, user_message: str) -> str:
     is_near_end = len(history) >= 30
     # ถ้า message มี @ แปลว่าลูกค้าให้ email — ต้อง generate SAVE_DATA + สรุป ต้องการ tokens เยอะ
     has_email = "@" in user_message
-    max_tokens = 4000 if has_email else (2000 if is_near_end else 600)
+    max_tokens = 16000 if has_email else (2000 if is_near_end else 1000)
 
     response = client.messages.create(
         model="claude-sonnet-4-20250514",
