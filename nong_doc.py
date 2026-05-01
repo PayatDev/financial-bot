@@ -64,10 +64,12 @@ def read_xlsx(local_path: str) -> dict:
                 client_data[row[0]] = row[1]
     return client_data
 
-def run(folder_name: str):
+
+def run(folder_name: str, folder_id: str = None):
     print(f"น้องดอค เริ่มทำงาน: {folder_name}")
 
-    folder_id = find_folder_id(folder_name)
+    if folder_id is None:
+        folder_id = find_folder_id(folder_name)
     print(f"✅ Found folder: {folder_id}")
 
     xlsx_path = download_xlsx(folder_id)
