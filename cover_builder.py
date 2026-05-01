@@ -482,7 +482,7 @@ output เป็น JSON object เดียว ไม่มีข้อคว�
 """
 
     response = client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model="claude-sonnet-4-6",
         max_tokens=9000,
         messages=[{"role": "user", "content": prompt}]
     )
@@ -506,7 +506,7 @@ output เป็น JSON object เดียว ไม่มีข้อคว�
 {json.dumps(parsed, ensure_ascii=False)}"""
 
     proof_resp = client.messages.create(
-        model="claude-sonnet-4-6-20250514",
+        model="claude-sonnet-4-6",
         max_tokens=9000,
         messages=[{"role": "user", "content": proof_prompt}]
     )
