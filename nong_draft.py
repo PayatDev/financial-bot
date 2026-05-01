@@ -191,4 +191,4 @@ def run(data=None):
     if os.path.exists(local_path): os.unlink(local_path)
 
     print("✅ xlsx พร้อม → เริ่มสร้างเอกสาร")
-    doc_run(folder_name)
+    doc_run(folder_name, folder_id)
