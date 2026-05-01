@@ -378,7 +378,7 @@ def call_claude(data):
 
     print("กำลัง generate Col G...")
     r2 = client.messages.create(
-        model="claude-sonnet-4-6-20250514",
+        model="claude-sonnet-4-6",
         max_tokens=8000,
         messages=[{"role": "user", "content": build_col_g_prompt(data)}]
     )
