@@ -343,7 +343,7 @@ def call_claude(data):
     # Call 1: story + dynamic (D/E/F)
     print("กำลังสร้างเรื่องราวและวิเคราะห์...")
     r1 = client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model="claude-sonnet-4-6-20250514",
         max_tokens=8000,
         messages=[{"role": "user", "content": build_story_prompt(data)}]
     )
