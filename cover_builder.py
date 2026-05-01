@@ -366,20 +366,13 @@ ISSUE_FIXED = {
 # Claude: generate client_situation + bullets
 # ─────────────────────────────────────────────────────────────────────
 
-def generate_issue_content(client_data: dict, issues: list) -> dict:
+def generate_issue_content(client_data: dict, issues: list = None) -> dict:
     client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
-    issues_text = "\n".join([
-        f"ประเด็นที่ {i['ลำดับ']}: สถานะ={i['สถานะ']} | ความเห็นคุณพยัต={i['ความเห็นคุณพยัต']}"
-        for i in issues
-    ])
 
     prompt = f"""คุณคือผู้ช่วยของคุณพยัต นักวางแผนการเงินและกฎหมายในประเทศไทย
 
 ข้อมูลลูกค้า:
 {json.dumps(client_data, ensure_ascii=False, indent=2)}
-
-ข้อมูล 12 ประเด็น:
-{issues_text}
 
 สำหรับแต่ละประเด็น 1-12 ให้เขียน 2 ส่วน:
 
