@@ -151,7 +151,7 @@ output เป็น JSON เท่านั้น ไม่มีข้อคว
 [{{"num": "๓.๑", "title": "เงินสดและบัญชีธนาคาร", "text": "ยกเงินสด..."}}]"""
 
     r1 = client.messages.create(
-        model="claude-sonnet-4-20250514", max_tokens=3000,
+        model="claude-sonnet-4-6", max_tokens=3000,
         messages=[{"role": "user", "content": prompt}]
     )
     text = r1.content[0].text.replace("```json","").replace("```","").strip()
@@ -171,7 +171,7 @@ output เป็น JSON เท่านั้น ไม่มีข้อคว
 {json.dumps(result, ensure_ascii=False)}"""
 
     r2 = client.messages.create(
-        model="claude-sonnet-4", max_tokens=3000,
+        model="claude-sonnet-4-6", max_tokens=3000,
         messages=[{"role": "user", "content": proof_prompt}]
     )
     pt = r2.content[0].text.replace("```json","").replace("```","").strip()
