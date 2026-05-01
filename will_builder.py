@@ -188,7 +188,34 @@ output เป็น JSON เท่านั้น ไม่มีข้อคว
     text = response.content[0].text.replace("```json", "").replace("```", "").strip()
     start = text.find("[")
     end   = text.rfind("]") + 1
-    return json.loads(text[start:end])
+    result = json.loads(text[start:end])
+
+    # ── call 2: proofread ──────────────────────────────────────────────
+    proof_prompt = f"""ตรวจสอบและแก้ไข JSON นี้ให้ถูกต้อง
+
+    กฎ:
+    1. typo ภาษาไทย เช่น "ทรัพย์" ไม่ใช่ "ทรัพ์" "พร้อม" ไม่ใช่ "พร้วม"
+    2. ห้ามมีคำภาษาอังกฤษยกเว้น ชื่อเฉพาะที่จำเป็น
+    3. ภาษากฎหมายต้องถูกต้องและเป็นทางการ
+    4. placeholder ต้องอยู่ในรูป [ข้อความ] ครบถ้วน
+    5. ส่งกลับ JSON เหมือนเดิมทุกอย่าง แก้แค่จุดที่ผิด
+    
+    {json.dumps(result, ensure_ascii=False)}"""
+
+    proof = client.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=3000,
+        messages=[{"role": "user", "content": proof_prompt}]
+        )
+    pt = proof.content[0].text.replace("```json","").replace("```","").strip()
+    ps = pt.find("["); pe = pt.rfind("]") + 1
+    if ps != -1 and pe > 0:
+        result = json.loads(pt[ps:pe])
+        print("✅ Proofread เสร็จ")
+    else:
+        print("⚠️ Proofread ไม่ได้ JSON ใช้ข้อมูลเดิม")
+
+    return result
 
 
 def build_will_docx(client_data: dict, clause3_items: list) -> str:
