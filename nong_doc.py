@@ -21,7 +21,6 @@ from living_will_builder import build_living_will
 from emergency_guide_builder import build_emergency_guide
 
 
-# ── Drive helpers ─────────────────────────────────────────────────────
 def find_folder_id(folder_name: str) -> str:
     service = get_drive_service()
     result = service.files().list(
@@ -41,15 +40,9 @@ def download_xlsx(folder_id: str) -> str:
         fields="files(id, name)"
     ).execute()
     files = result.get("files", [])
+    files = [f for f in files if not f["name"].startswith("~$")]
     if not files:
         raise ValueError("ไม่พบ xlsx ใน folder")
-
-    # ── กรอง temp file ที่ Excel สร้างเมื่อเปิดค้างอยู่ ──
-    files = [f for f in files if not f["name"].startswith("~$")]
-
-    if not files:
-        raise ValueError("ไม่พบ xlsx จริงใน folder (มีแต่ temp file)")
-
     file_id = files[0]["id"]
     request = service.files().get_media(fileId=file_id)
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx")
@@ -62,30 +55,17 @@ def download_xlsx(folder_id: str) -> str:
     return tmp.name
 
 
-# ── Read xlsx ─────────────────────────────────────────────────────────
-def read_xlsx(local_path: str) -> tuple[dict, list]:
+def read_xlsx(local_path: str) -> dict:
     wb = load_workbook(local_path, data_only=True)
-
-    ws1 = wb["1 เรื่องราว"]
+    ws1 = wb["เรื่องราวลูกค้า"]
     client_data = {}
     for row in ws1.iter_rows(values_only=True):
         if row[0] and row[1] and row[0] not in ("เรื่องราวลูกค้า", "ข้อมูลรายช่อง"):
             if isinstance(row[0], str) and len(row[0]) < 40:
                 client_data[row[0]] = row[1]
-
-    ws2 = wb["2 วิเคราะห์"]
-    issues = []
-    for row in ws2.iter_rows(min_row=3, values_only=True):
-        if row[0] and str(row[0]).isdigit():   # ← แก้จาก isinstance int → str.isdigit()
-            issues.append({
-                "ลำดับ":           int(row[0]),
-                "สถานะ":           row[4] or "",   # ← col E (index 4)
-                "ความเห็นคุณพยัต": row[5] or "",   # ← col F (index 5)
-            })
-    return client_data, issues
+    return client_data
 
 
-# ── Main ──────────────────────────────────────────────────────────────
 def run(folder_name: str):
     print(f"น้องดอค เริ่มทำงาน: {folder_name}")
 
@@ -93,56 +73,50 @@ def run(folder_name: str):
     print(f"✅ Found folder: {folder_id}")
 
     xlsx_path = download_xlsx(folder_id)
-    client_data, issues = read_xlsx(xlsx_path)
+    client_data = read_xlsx(xlsx_path)
     if os.path.exists(xlsx_path):
         os.unlink(xlsx_path)
-    print(f"✅ อ่าน xlsx เรียบร้อย: {len(issues)} ประเด็น")
+    print(f"✅ อ่าน xlsx เรียบร้อย: {len(client_data)} fields")
 
     print("กำลัง generate เนื้อหา...")
-    generated = generate_issue_content(client_data, issues)
-    print(f"✅ Generate เสร็จ")
+    generated = generate_issue_content(client_data)
+    print("✅ Generate เสร็จ")
 
     nickname = client_data.get("ชื่อเล่น", folder_name.split("_")[0])
-    cover_path = build_cover(client_data, issues, generated, folder_name)
+
+    cover_path = build_cover(client_data, [], generated, folder_name)
     cover_filename = f"1_แผนครอบครัว_คุณ{nickname}.docx"
     upload_file_to_folder(cover_path, cover_filename, folder_id)
-    if os.path.exists(cover_path):
-        os.unlink(cover_path)
+    if os.path.exists(cover_path): os.unlink(cover_path)
 
-    will_path     = build_will(client_data)
+    will_path = build_will(client_data)
     will_filename = f"2_พินัยกรรม_คุณ{nickname}.docx"
     upload_file_to_folder(will_path, will_filename, folder_id)
-    if os.path.exists(will_path):
-        os.unlink(will_path)
+    if os.path.exists(will_path): os.unlink(will_path)
 
-    poa_path     = build_poa(client_data)
+    poa_path = build_poa(client_data)
     poa_filename = f"3_หนังสือมอบอำนาจ_คุณ{nickname}.docx"
     upload_file_to_folder(poa_path, poa_filename, folder_id)
-    if os.path.exists(poa_path):
-        os.unlink(poa_path)
+    if os.path.exists(poa_path): os.unlink(poa_path)
 
-    lw_path     = build_living_will(client_data)
+    lw_path = build_living_will(client_data)
     lw_filename = f"4_หนังสือแสดงเจตนาการยื้อชีวิต_คุณ{nickname}.docx"
     upload_file_to_folder(lw_path, lw_filename, folder_id)
-    if os.path.exists(lw_path):
-        os.unlink(lw_path)
+    if os.path.exists(lw_path): os.unlink(lw_path)
 
-    guide_path     = build_emergency_guide(client_data)
+    guide_path = build_emergency_guide(client_data)
     guide_filename = f"5_คู่มือฉุกเฉิน_คุณ{nickname}.docx"
     upload_file_to_folder(guide_path, guide_filename, folder_id)
-    if os.path.exists(guide_path):
-        os.unlink(guide_path)
-        
-    print(f"✅ {will_filename}")
+    if os.path.exists(guide_path): os.unlink(guide_path)
 
     send_line_message(
-    f"🆕 ลูกค้าใหม่ครับ\n\n"
-    f"ชื่อ: คุณ{nickname}\n"
-    f"อาชีพ: {client_data.get('อาชีพ', '')}\n"
-    f"อายุ: {client_data.get('อายุ', '')} ปี\n"
-    f"📁 {folder_name}\n\n"
-    f"เอกสารทั้ง 5 ชิ้นพร้อมใน Drive แล้วครับ\n"
-    f"โปรดตรวจและแก้ไขก่อนส่งให้ลูกค้าทาง\n"
-    f"📧 {client_data.get('อีเมล', '[ยังไม่มีอีเมล]')}"
+        f"✅ เอกสารพร้อมแล้วครับ\n\n"
+        f"ชื่อ: คุณ{nickname}\n"
+        f"อาชีพ: {client_data.get('อาชีพ', '')}\n"
+        f"อายุ: {client_data.get('อายุ', '')} ปี\n"
+        f"📁 {folder_name}\n\n"
+        f"เอกสาร 5 ชิ้นพร้อมใน Drive แล้วครับ\n"
+        f"โปรดตรวจและแก้ไขก่อนส่งลูกค้าทาง\n"
+        f"📧 {client_data.get('อีเมล', '[ยังไม่มีอีเมล]')}"
     )
     print("เสร็จสิ้น")
