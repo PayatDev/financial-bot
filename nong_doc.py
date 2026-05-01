@@ -54,17 +54,15 @@ def download_xlsx(folder_id: str) -> str:
     print(f"✅ Downloaded xlsx: {files[0]['name']}")
     return tmp.name
 
-
 def read_xlsx(local_path: str) -> dict:
     wb = load_workbook(local_path, data_only=True)
-    ws1 = wb["เรื่องราวลูกค้า"]
+    ws1 = wb.worksheets[0]  # ดึง sheet แรกเสมอ
     client_data = {}
     for row in ws1.iter_rows(values_only=True):
         if row[0] and row[1] and row[0] not in ("เรื่องราวลูกค้า", "ข้อมูลรายช่อง"):
             if isinstance(row[0], str) and len(row[0]) < 40:
                 client_data[row[0]] = row[1]
     return client_data
-
 
 def run(folder_name: str):
     print(f"น้องดอค เริ่มทำงาน: {folder_name}")
