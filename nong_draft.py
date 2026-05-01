@@ -356,7 +356,7 @@ def build_col_g_prompt(data):
 
 def call_claude(data):
     client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
-
+ 
     print("กำลังสร้างเรื่องราวและวิเคราะห์...")
     r1 = client.messages.create(
         model="claude-sonnet-4-6",
@@ -364,10 +364,10 @@ def call_claude(data):
         messages=[{"role": "user", "content": build_story_prompt(data)}]
     )
     result1 = r1.content[0].text
-
+ 
     if "---SPLIT---" not in result1:
         raise ValueError("ไม่พบ ---SPLIT---")
-
+ 
     part1, part2 = result1.split("---SPLIT---", 1)
     part2 = part2.strip()
     start = part2.find("[")
@@ -375,11 +375,11 @@ def call_claude(data):
     if start == -1 or end == 0:
         raise ValueError("ไม่พบ JSON array ในส่วนที่ 2")
     dynamic = json.loads(part2[start:end])
-
+ 
     print("กำลัง generate Col G...")
     r2 = client.messages.create(
         model="claude-sonnet-4-6",
-        max_tokens=8000,
+        max_tokens=10000,
         messages=[{"role": "user", "content": build_col_g_prompt(data)}]
     )
     result2 = r2.content[0].text.strip()
@@ -387,9 +387,13 @@ def call_claude(data):
     end2 = result2.rfind("]") + 1
     if start2 == -1 or end2 == 0:
         raise ValueError("ไม่พบ JSON array ใน Col G")
-    col_g_data = json.loads(result2[start2:end2])
+    try:
+        col_g_data = json.loads(result2[start2:end2])
+    except json.JSONDecodeError as e:
+        print(f"⚠️ Col G JSON error: {e} — ใช้ empty map")
+        col_g_data = []
     col_g_map = {item.get("ลำดับ"): item.get("col_g", "") for item in col_g_data}
-
+ 
     print(f"✅ story + {len(dynamic)} ประเด็น + {len(col_g_data)} Col G")
     return part1.strip(), dynamic, col_g_map
 
