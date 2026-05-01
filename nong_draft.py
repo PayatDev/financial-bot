@@ -13,7 +13,7 @@ from drive_service import create_folder, upload_file_to_folder
 
 from nong_doc import run as doc_run
 
-DEV_MODE = False
+DEV_MODE = True
 
 SHEET_ID = os.environ.get("GOOGLE_SHEET_ID")
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
