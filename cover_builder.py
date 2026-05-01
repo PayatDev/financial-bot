@@ -366,6 +366,15 @@ ISSUE_FIXED = {
 # Claude: generate client_situation + bullets
 # ─────────────────────────────────────────────────────────────────────
 
+def _extract_json(text: str) -> dict:
+    """ดึง JSON object แรกที่เจอ ไม่สนข้อความก่อนหลัง"""
+    decoder = json.JSONDecoder()
+    start = text.find("{")
+    if start == -1:
+        raise ValueError("ไม่พบ {")
+    obj, _ = decoder.raw_decode(text, start)
+    return obj
+
 def generate_issue_content(client_data: dict, issues: list = None) -> dict:
     client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
 
@@ -483,7 +492,7 @@ output เป็น JSON object เดียว ไม่มีข้อคว�
     print(f"DEBUG cover[:200]: {text[:200]}")
     start = text.find("{"); end = text.rfind("}") + 1
     if start == -1 or end == 0: raise ValueError("ไม่พบ JSON")
-    parsed = json.loads(text[start:end])
+    parsed = _extract_json(text)
 
     # ── call 2: proofread ────────────────────────────────────────
     print("ตรวจ proofread...")
@@ -506,7 +515,7 @@ output เป็น JSON object เดียว ไม่มีข้อคว�
     proof_text = proof_resp.content[0].text.replace("```json","").replace("```","").strip()
     ps = proof_text.find("{"); pe = proof_text.rfind("}") + 1
     if ps != -1 and pe > 0:
-        parsed = json.loads(proof_text[ps:pe])
+        parsed = _extract_json(proof_text)
         print("✅ Proofread เสร็จ")
     else:
         print("⚠️ Proofread ไม่ได้ JSON ใช้ข้อมูลเดิม")
