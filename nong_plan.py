@@ -528,7 +528,7 @@ def chat(user_id: str, history: list, user_message: str) -> str:
     max_tokens = 16000 if has_email else (2000 if is_near_end else 1000)
 
     response = client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model="claude-sonnet-4-6-20250514", 
         max_tokens=max_tokens,
         system=[
             {
