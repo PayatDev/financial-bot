@@ -5,6 +5,7 @@ import anthropic
 from config import ANTHROPIC_API_KEY
 
 client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+MODEL = "claude-sonnet-4-20250514"
 
 SYSTEM_PROMPT = """คุณคือ "น้องแพลน" ผู้ช่วยของคุณพยัต จิรสุวรรณพงศ์ นักวางแผนการเงิน
 
@@ -528,7 +529,7 @@ def chat(user_id: str, history: list, user_message: str) -> str:
     max_tokens = 16000 if has_email else (2000 if is_near_end else 1000)
 
     response = client.messages.create(
-        model="claude-sonnet-4-6", 
+        model = MODEL, 
         max_tokens=max_tokens,
         system=[
             {
