@@ -95,7 +95,6 @@ def run_doc(folder: str):
     threading.Thread(target=doc_run, args=(folder,), daemon=True).start()
     return {"status": "started", "folder": folder}
 
-
 @app.get("/force-save")
 def force_save():
     """ทดสอบ save ลง sheet โดยไม่ต้องคุยกับน้องแพลน"""
@@ -173,7 +172,11 @@ def force_save():
     else:
         return {"status": "❌ บันทึกไม่สำเร็จ ดู Railway logs"}
         
-
+@app.get("/chat-log/{user_id}")
+def chat_log(user_id: str):
+    history = get_history(user_id)
+    return {"user_id": user_id, "messages": history}
+    
 @app.post("/webhook")
 async def webhook(request: Request):
     signature = request.headers.get("X-Line-Signature", "")
