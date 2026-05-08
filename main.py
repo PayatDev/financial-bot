@@ -1,330 +1,252 @@
-# main.py
+"""
+main.py — น้องริค FastAPI App
+LINE Bot webhook → Claude chat → save chatlog → fixed message → dead session
+"""
 
-import json, os
-from fastapi import FastAPI, Request, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from linebot.v3 import WebhookHandler
-from linebot.v3.messaging import (
-    Configuration,
-    ApiClient,
-    MessagingApi,
-    ReplyMessageRequest,
-    TextMessage,
-)
-from linebot.v3.webhooks import MessageEvent, TextMessageContent
-from linebot.v3.exceptions import InvalidSignatureError
+import os
+import hmac
+import hashlib
+import base64
+import json
+from contextlib import asynccontextmanager
 
-from config import LINE_CHANNEL_SECRET, LINE_CHANNEL_ACCESS_TOKEN
-from nong_plan import chat
-from session_store import get_history, update_history, clear_session
-from sheets_service import save_to_sheets
+import httpx
+from fastapi import FastAPI, Request, HTTPException, BackgroundTasks
+from fastapi.responses import JSONResponse
 
-from drive_service import get_drive_service
-from nong_draft import run as draft_run
-from nong_doc import run as doc_run
-
-from order_service import save_order
-from pydantic import BaseModel
-
-import threading
-
-app = FastAPI()
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["https://payatdev.github.io"],
-    allow_methods=["POST", "GET"],
-    allow_headers=["Content-Type"],
+import session_manager as sm
+from session_manager import SessionStatus
+from claude_client import chat_reply
+from error_handler import (
+    RickError, ErrorCode, USER_MESSAGES,
+    parse_line_error, log_error, log_info, log_warn,
 )
 
-configuration = Configuration(access_token=LINE_CHANNEL_ACCESS_TOKEN)
-handler = WebhookHandler(LINE_CHANNEL_SECRET)
+LINE_CHANNEL_SECRET = os.environ["LINE_CHANNEL_SECRET"]
+LINE_CHANNEL_ACCESS_TOKEN = os.environ["LINE_CHANNEL_ACCESS_TOKEN"]
+LINE_REPLY_URL = "https://api.line.me/v2/bot/message/reply"
+LINE_PUSH_URL  = "https://api.line.me/v2/bot/message/push"
 
-RESET_COMMANDS = ["/reset", "reset", "/เริ่มใหม่", "เริ่มใหม่"]
-
-MAX_TURNS = 80  # ป้องกันค่าใช้จ่ายบาน
-
-# เก็บสถานะ completed ใน memory + session store
-# key = user_id, value = True
-COMPLETED_USERS: dict = {}
-
-CONTACT_MESSAGE = (
-    "น้องแพลนมีหน้าที่เก็บข้อมูลเพียงอย่างเดียวครับ\n"
-    "หากมีอะไรสอบถามเพิ่มเติม ติดต่อคุณพยัตได้เลยนะครับ 😊\n\n"
-    "📧 Email: payat.jira@gmail.com"
+# Fixed message หลัง save chatlog สำเร็จ
+COMPLETE_MSG = (
+    "น้องริคทำหน้าที่เสร็จแล้วครับ 😊\n"
+    "รายงานของคุณกำลังจัดทำอยู่\n"
+    "หากมีข้อสงสัยติดต่อคุณพยัตได้โดยตรงครับ"
 )
 
-# เพิ่ม model
-class OrderData(BaseModel):
-    name: str
-    email: str
-    phone: str = ""
-    payment: str
-    note: str = ""
-    
-@app.get("/")
-def root():
-    return {"status": "Financial Bot is running! 🤖"}
+# Budget limit
+BUDGET_EXCEEDED_MSG = "ขอโทษนะครับ session นี้ยาวเกินไปแล้ว กรุณาเริ่มการประเมินใหม่ได้เลยครับ 🙏"
 
-@app.post("/order")
-async def create_order(data: OrderData):
-    try:
-        save_order(data.dict())
-        return {"status": "ok"}
-    except Exception as e:
-        print(f"❌ Order error: {e}")
-        raise HTTPException(status_code=500, detail="บันทึกไม่สำเร็จ")
+# Error messages
+ERROR_CLAUDE_MSG = "ขออภัยครับ ระบบขัดข้องชั่วคราว กรุณาส่งข้อความใหม่อีกครั้งครับ"
+ERROR_SAVE_MSG = "ขออภัยครับ เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาติดต่อคุณพยัตโดยตรงครับ"
 
-@app.get("/test-drive")
-def test_drive():
-    service = get_drive_service()
-    results = service.files().list(
-        q=f"'{os.environ.get('GOOGLE_DRIVE_FOLDER_ID')}' in parents",
-        fields="files(id, name)"
-    ).execute()
-    files = results.get("files", [])
-    return {"files": files, "count": len(files)}
 
-@app.get("/test-draft")
-def test_draft():
-    threading.Thread(target=draft_run, daemon=True).start()
-    return {"status": "started — ดู log ใน Railway"}
-
-@app.get("/run-doc")
-def run_doc(folder: str):
-    threading.Thread(target=doc_run, args=(folder,), daemon=True).start()
-    return {"status": "started", "folder": folder}
-
-@app.get("/force-save")
-def force_save():
-    """ทดสอบ save ลง sheet โดยไม่ต้องคุยกับน้องแพลน"""
-    test_data = {
-        "email": "test@test.com",
-        "nickname": "ทดสอบ",
-        "age": "35",
-        "gender": "ชาย",
-        "occupation": "พนักงานบริษัท",
-        "health": "ดี",
-        "income_self": "50,000 บาท/เดือน",
-        "hobbies_and_risks": "วิ่ง ดูหนัง",
-        "spouse_nickname": "แพลน",
-        "spouse_age": "32",
-        "spouse_occupation": "ครู",
-        "spouse_income": "30,000 บาท/เดือน",
-        "spouse_health": "ดี",
-        "spouse_status": "อยู่ด้วยกัน",
-        "children": "น้องทดสอบ 3 ขวบ สุขภาพดี",
-        "children_outside_marriage": "ไม่มี",
-        "assets_cash": "500,000 บาท",
-        "assets_property": "บ้าน 3 ล้าน ปลอดหนี้",
-        "assets_investment": "หุ้น 200,000 บาท",
-        "assets_crypto_wallet": "ไม่มี",
-        "assets_insurance_savings": "ไม่มี",
-        "assets_digital": "ไม่มี",
-        "assets_business": "ไม่มี",
-        "assets_valuables": "รถ 500,000 บาท",
-        "debt": "หนี้รถ 200,000 บาท",
-        "guarantor": "ไม่มี",
-        "insurance_life": "ประกันชีวิต 1 ล้าน",
-        "insurance_health": "ประกันสุขภาพเหมาจ่าย",
-        "insurance_group": "ไม่มี",
-        "welfare": "ประกันสังคม",
-        "funeral_wishes": "พิธีพุทธ งบ 100,000 บาท",
-        "emergency_cash_90days": "ใช้เงินออม",
-        "estate_admin_cost": "ใช้เงินออม",
-        "asset_distribution": "ให้ภรรยาทั้งหมด",
-        "debt_responsibility": "ภรรยารับผิดชอบ",
-        "business_succession": "ไม่มีกิจการ",
-        "urgent_manager": "พี่ชาย",
-        "estate_executor": "ภรรยา",
-        "documents_location": "ตู้เซฟที่บ้าน ภรรยารู้",
-        "financial_poa": "ภรรยา",
-        "living_will": "ไม่ยื้อชีวิต ภรรยาตัดสินใจ",
-        "surviving_spouse_plan": "ไม่กังวล",
-        "guardian_primary": "พี่ชาย ยินดี",
-        "guardian_backup": "น้องสาวภรรยา",
-        "money_guardian_primary": "น้องสาวภรรยา",
-        "money_guardian_backup": "ไม่ได้ระบุ",
-        "fullname_self": "ทดสอบ ระบบ",
-        "id_self": "1234567890123",
-        "address_self": "123 ถนนทดสอบ กรุงเทพ 10100",
-        "fullname_spouse": "แพลน ระบบ",
-        "id_spouse": "ไม่ได้ระบุ",
-        "fullname_children": "ทดสอบน้อย ระบบ",
-        "fullname_executor": "แพลน ระบบ",
-        "id_executor": "ไม่ได้ระบุ",
-        "fullname_executor_backup": "ไม่ได้ระบุ",
-        "id_executor_backup": "ไม่ได้ระบุ",
-        "fullname_guardian_primary": "พี่ชาย ระบบ",
-        "id_guardian_primary": "ไม่ได้ระบุ",
-        "fullname_guardian_backup": "ไม่ได้ระบุ",
-        "id_guardian_backup": "ไม่ได้ระบุ",
-        "fullname_money_guardian_primary": "ไม่ได้ระบุ",
-        "id_money_guardian_primary": "ไม่ได้ระบุ",
-        "fullname_money_guardian_backup": "ไม่ได้ระบุ",
-        "id_money_guardian_backup": "ไม่ได้ระบุ",
-        "gaps_for_payat": "ทดสอบระบบ",
-        "summary": "ข้อมูลทดสอบระบบ force-save"
+# ─── LINE Push (ไม่มีหมดอายุ ใช้ user_id) ─────────────────────────────────────
+async def line_push(user_id: str, text: str) -> bool:
+    headers = {
+        "Authorization": f"Bearer {LINE_CHANNEL_ACCESS_TOKEN}",
+        "Content-Type": "application/json",
     }
-    result = save_to_sheets("test_force_save", test_data)
-    if result:
-        return {"status": "✅ บันทึกลง Sheet สำเร็จ"}
-    else:
-        return {"status": "❌ บันทึกไม่สำเร็จ ดู Railway logs"}
-        
-@app.get("/chat-log/{user_id}")
-def chat_log(user_id: str):
-    history = get_history(user_id)
-    return {"user_id": user_id, "messages": history}
-    
-@app.post("/webhook")
-async def webhook(request: Request):
-    signature = request.headers.get("X-Line-Signature", "")
-    body = await request.body()
+    payload = {"to": user_id, "messages": [{"type": "text", "text": text}]}
     try:
-        handler.handle(body.decode(), signature)
-    except InvalidSignatureError:
-        raise HTTPException(status_code=400, detail="Invalid signature")
-    return {"status": "ok"}
-
-
-def reply_to_line(event, text: str):
-    try:
-        with ApiClient(configuration) as api_client:
-            line_bot_api = MessagingApi(api_client)
-            line_bot_api.reply_message(
-                ReplyMessageRequest(
-                    reply_token=event.reply_token,
-                    messages=[TextMessage(text=text)],
-                )
-            )
-    except Exception as e:
-        print(f"❌ Reply token expired or error: {e}")
-
-
-def is_completed(user_id: str) -> bool:
-    """เช็คว่า user นี้ส่งข้อมูลแล้วหรือยัง
-    เก็บไว้ใน history เป็น marker เพื่อให้คงอยู่หลัง restart"""
-    if user_id in COMPLETED_USERS:
-        return True
-    # fallback: เช็คใน history ว่ามี COMPLETED marker ไหม
-    history = get_history(user_id)
-    for msg in history:
-        if msg.get("role") == "assistant" and "[COMPLETED]" in msg.get("content", ""):
-            COMPLETED_USERS[user_id] = True
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.post(LINE_PUSH_URL, headers=headers, json=payload)
+            resp.raise_for_status()
             return True
-    return False
-
-
-@handler.add(MessageEvent, message=TextMessageContent)
-def handle_message(event: MessageEvent):
-    user_id = event.source.user_id
-    user_message = event.message.text
-
-    # /doc command — ต้องอยู่ก่อน reset และก่อน completed check
-    if user_message.strip().startswith("/doc "):
-        folder_name = user_message.strip()[5:].strip()
-        threading.Thread(target=doc_run, args=(folder_name,), daemon=True).start()
-        reply_to_line(event, f"รับทราบครับ กำลังสร้างเอกสารสำหรับ {folder_name}\nรอสักครู่ แล้วจะแจ้งกลับครับ 📄")
-        return
-
-    # reset command
-    if user_message.strip().lower() in RESET_COMMANDS:
-        clear_session(user_id)
-        COMPLETED_USERS.pop(user_id, None)
-        reply_to_line(event, "ล้างข้อมูลเรียบร้อยแล้วครับ พิมพ์อะไรก็ได้เพื่อเริ่มบทสนทนาใหม่ 😊")
-        return
-
-    # สถานะที่ 2: save เสร็จแล้ว — ไม่เรียก Claude
-    if is_completed(user_id):
-        reply_to_line(event, CONTACT_MESSAGE)
-        return
-
-    # สถานะที่ 1: กำลังสัมภาษณ์อยู่
-    history = get_history(user_id)
-    
-    if len(history) >= MAX_TURNS * 2:
-        reply_to_line(event,
-            "ขออภัยครับ ผมขออนุญาตจบการสนทนานี้นะครับ\n"
-            "กรุณาติดต่อคุณพยัตโดยตรงนะครับ 😊\n\n"
-            "📧 payat.jira@gmail.com"
-        )
-        return
-        
-    try:
-        bot_reply = chat(user_id, history, user_message)
     except Exception as e:
-        print(f"❌ Claude API error: {e}")
-        reply_to_line(event, "ขออภัยครับ ระบบขัดข้องชั่วคราว กรุณาลองใหม่อีกครั้งในอีกสักครู่นะครับ 🙏")
+        err = parse_line_error(e, user_id=user_id)
+        log_error(err, context={"action": "line_push_failed"})
+        return False
+
+
+# ─── LINE Signature Verification ─────────────────────────────────────────────
+def verify_line_signature(body: bytes, signature: str) -> bool:
+    mac = hmac.new(LINE_CHANNEL_SECRET.encode("utf-8"), body, hashlib.sha256).digest()
+    return hmac.compare_digest(base64.b64encode(mac).decode("utf-8"), signature)
+
+
+# ─── LINE Reply ───────────────────────────────────────────────────────────────
+async def line_reply(reply_token: str, text: str, user_id: str = None) -> bool:
+    headers = {
+        "Authorization": f"Bearer {LINE_CHANNEL_ACCESS_TOKEN}",
+        "Content-Type": "application/json",
+    }
+    payload = {"replyToken": reply_token, "messages": [{"type": "text", "text": text}]}
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.post(LINE_REPLY_URL, headers=headers, json=payload)
+            resp.raise_for_status()
+            return True
+    except Exception as e:
+        err = parse_line_error(e, user_id=user_id)
+        if err.code == ErrorCode.LINE_INVALID_TOKEN:
+            log_warn("LINE reply token expired", user_id=user_id)
+        else:
+            # LINE API error → log only, ไม่ reply ลูกค้า
+            log_error(err, context={"action": "line_reply_failed"})
+        return False
+
+
+# ─── Background: save chatlog + push fixed message ───────────────────────────
+async def finalize_session(user_id: str):
+    """
+    Background task:
+    1. save chatlog ลง Sheets
+    2. push fixed message ด้วย user_id (ไม่มีหมดอายุ)
+    3. mark complete / timeout
+    """
+    session = sm.get(user_id)
+    if not session:
         return
 
-    # เช็ค SAVE_DATA
-    if "[SAVE_DATA]" in bot_reply and "[END_SAVE_DATA]" in bot_reply:
-        reply_text = bot_reply.split("[SAVE_DATA]")[0].strip()
-        try:
-            raw = bot_reply.split("[SAVE_DATA]")[1].split("[END_SAVE_DATA]")[0].strip()
+    _extract_basic_data(session)
 
-            raw = raw.replace("```json", "").replace("```", "").strip()
-    
-            data = json.loads(raw)  # 🔥 จุดสำคัญ
+    from sheets_handler import save_chatlog
+    saved = save_chatlog(session)
 
-            # ✅ กันพัง
-            if not isinstance(data, dict):
-                raise ValueError("SAVE_DATA is not dict")
-
-            EXPECTED_FIELDS = [
-                                "email", "nickname", "age", "gender", "occupation",
-                                "health", "income_self", "hobbies_and_risks",
-                                "spouse_nickname", "spouse_age", "spouse_occupation",
-                                "spouse_income", "spouse_health", "spouse_status",
-                                "children", "children_outside_marriage",
-                                "guardian_primary", "guardian_backup",
-                                "money_guardian_primary", "money_guardian_backup",
-                                "estate_executor", "urgent_manager",
-                                "asset_distribution", "surviving_spouse_plan",
-                                "debt_responsibility", "business_succession",
-                                "living_will", "financial_poa",
-                                "assets_cash", "assets_property", "assets_business",
-                                "assets_investment", "assets_insurance_savings",
-                                "insurance_life", "insurance_health", "insurance_group",
-                                "welfare", "assets_crypto_wallet", "assets_digital",
-                                "assets_valuables", "debt", "guarantor",
-                                "emergency_cash_90days", "estate_admin_cost",
-                                "funeral_wishes", "documents_location",
-                                "fullname_self", "id_self", "address_self",
-                                "fullname_spouse", "id_spouse",
-                                "fullname_children",
-                                "fullname_executor", "id_executor",
-                                "fullname_executor_backup", "id_executor_backup",
-                                "fullname_guardian_primary", "id_guardian_primary",
-                                "fullname_guardian_backup", "id_guardian_backup",
-                                "fullname_money_guardian_primary", "id_money_guardian_primary",
-                                "fullname_money_guardian_backup", "id_money_guardian_backup",
-                                "gaps_for_payat", "summary",
-                                ]
-
-            data = {k: data.get(k, "ไม่ได้ระบุ") for k in EXPECTED_FIELDS}
-    
-            save_to_sheets(user_id, data)
-    
-            threading.Thread(target=draft_run, args=(data,), daemon=True).start()
-    
-            COMPLETED_USERS[user_id] = True
-            update_history(user_id, "user", user_message)
-            update_history(user_id, "assistant", "[COMPLETED]")
-    
-            print(f"✅ {user_id} complete — {data.get('nickname', '')}")
-    
-        except Exception as e:
-            print(f"❌ JSON parse error: {e}")
-            print(f"RAW SAVE_DATA:\n{raw}")
-            reply_text = "ขออภัยครับ ระบบบันทึกข้อมูลมีปัญหา กรุณาลองใหม่อีกครั้งนะครับ 🙏"
-    
-            update_history(user_id, "user", user_message)
-            update_history(user_id, "assistant", bot_reply)
+    if saved:
+        session.mark_complete(output_path="sheets")
+        log_info("Session complete — chatlog saved", user_id=user_id)
+        # Push message ด้วย user_id — ไม่มีหมดอายุ ไม่ต้องรอ reply token
+        await line_push(user_id, COMPLETE_MSG)
     else:
-        reply_text = bot_reply
-        update_history(user_id, "user", user_message)
-        update_history(user_id, "assistant", bot_reply)
+        session.mark_timeout()
+        log_error(
+            RickError(code=ErrorCode.OUTPUT_SAVE_FAILED,
+                      message="save_chatlog failed", user_id=user_id),
+        )
+        await line_push(user_id, ERROR_SAVE_MSG)
 
-    reply_to_line(event, reply_text)
+
+def _extract_basic_data(session):
+    """Extract email และ nickname จาก conversation แบบง่ายๆ ไม่เรียก Claude"""
+    for msg in reversed(session.messages):
+        if msg.role == "user" and "@" in msg.content and "." in msg.content:
+            words = msg.content.split()
+            for w in words:
+                if "@" in w and "." in w:
+                    session.data.email = w.strip()
+                    break
+        if session.data.email:
+            break
+
+
+# ─── FastAPI App ──────────────────────────────────────────────────────────────
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    log_info("น้องริค ready 🤖")
+    yield
+    log_info("น้องริค shutting down")
+
+
+app = FastAPI(title="น้องริค", lifespan=lifespan)
+
+
+@app.get("/health")
+async def health():
+    return {"status": "ok", "bot": "น้องริค"}
+
+
+@app.get("/test-sheets")
+async def test_sheets():
+    from sheets_handler import test_connection
+    return test_connection()
+
+
+@app.post("/webhook")
+async def webhook(request: Request, background_tasks: BackgroundTasks):
+    body = await request.body()
+    signature = request.headers.get("X-Line-Signature", "")
+
+    if not verify_line_signature(body, signature):
+        raise HTTPException(status_code=403, detail="Invalid signature")
+
+    data = json.loads(body)
+    events = data.get("events", [])
+
+    for event in events:
+        if event.get("type") != "message":
+            continue
+        if event["message"].get("type") != "text":
+            continue
+
+        user_id = event["source"]["userId"]
+        reply_token = event["replyToken"]
+        user_text = event["message"]["text"].strip()
+
+        # ─── Guard: dead session → fixed message เสมอ ────────────────────────
+        session = sm.get(user_id)
+        if session and session.is_dead():
+            await line_reply(reply_token, COMPLETE_MSG, user_id=user_id)
+            log_info("Dead session — sent fixed message", user_id=user_id)
+            continue
+
+        # ─── Get/create session ───────────────────────────────────────────────
+        session = sm.get_or_create(user_id)
+
+        # ─── Guard: budget exceeded ───────────────────────────────────────────
+        if session.should_force_close():
+            log_warn("Budget exceeded", user_id=user_id, turns=session.turn_count)
+            await line_reply(reply_token, BUDGET_EXCEEDED_MSG, user_id=user_id)
+            session.mark_timeout()
+            continue
+
+        # ─── Add user message ─────────────────────────────────────────────────
+        session.add_message("user", user_text)
+
+        # ─── Claude API ───────────────────────────────────────────────────────
+        try:
+            reply_text, flow_complete = await chat_reply(session, user_text)
+
+        except RickError as e:
+            log_error(e, context={"turn": session.turn_count})
+            # Claude error → แจ้งลูกค้าให้ลองใหม่
+            await line_reply(reply_token, ERROR_CLAUDE_MSG, user_id=user_id)
+            if not e.retryable:
+                session.mark_timeout()
+            continue
+
+        except Exception as e:
+            log_error(RickError(code=ErrorCode.UNKNOWN, message=str(e),
+                                user_id=user_id, original=e))
+            await line_reply(reply_token, ERROR_CLAUDE_MSG, user_id=user_id)
+            continue
+
+        # ─── Add assistant reply ──────────────────────────────────────────────
+        session.add_message("assistant", reply_text)
+
+        # ─── Reply to user ────────────────────────────────────────────────────
+        if reply_text:
+            await line_reply(reply_token, reply_text, user_id=user_id)
+
+        # ─── Flow complete → reply ทันที แล้วค่อย save ใน background ──────────
+        if flow_complete:
+            log_info("Flow complete — queueing finalize", user_id=user_id,
+                     turns=session.turn_count)
+            # push message ใน background หลัง save Sheets สำเร็จ
+            background_tasks.add_task(finalize_session, user_id)
+
+    return JSONResponse({"status": "ok"})
+
+
+# ─── Dev endpoints ────────────────────────────────────────────────────────────
+@app.get("/sessions/{user_id}")
+async def get_session_info(user_id: str):
+    session = sm.get(user_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return {
+        "user_id": session.user_id,
+        "status": session.status.value,
+        "turn_count": session.turn_count,
+        "budget_remaining": session.budget_remaining(),
+        "email": session.data.email,
+        "nickname": session.data.nickname,
+    }
+
+
+@app.delete("/sessions/{user_id}")
+async def reset_session(user_id: str):
+    sm.delete(user_id)
+    return {"status": "deleted", "user_id": user_id}
