@@ -164,7 +164,7 @@ def build_workbook(data: dict, story: str):
 
     nickname = data.get("nickname", "ลูกค้า")
     date_str = datetime.now().strftime("%d%m%Y")
-    filename = f"{nickname}_{date_str}.xlsx"
+    filename = f"เรื่องราว_คุณ{nickname}.xlsx"
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx")
     wb.save(tmp.name)
     return tmp.name, filename
@@ -182,7 +182,7 @@ def run(data=None):
 
     nickname    = data.get("nickname", "ลูกค้า")
     date_str    = datetime.now().strftime("%d%m%Y")
-    folder_name = f"{nickname}_{date_str}"
+    folder_name = f"{date_str}_แผนครอบครัว_คุณ{nickname}"
     folder_id   = create_folder(folder_name)
 
     local_path, filename = build_workbook(data, story)
