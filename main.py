@@ -11,7 +11,7 @@ from linebot.v3.messaging import (
     ReplyMessageRequest,
     TextMessage,
 )
-from linebot.v3.webhooks import MessageEvent, TextMessageContent
+from linebot.v3.webhooks import MessageEvent, TextMessageContent, FollowEvent
 from linebot.v3.exceptions import InvalidSignatureError
 
 from config import LINE_CHANNEL_SECRET, LINE_CHANNEL_ACCESS_TOKEN
@@ -27,6 +27,16 @@ from order_service import save_order
 from pydantic import BaseModel
 
 import threading
+
+GREETING_MESSAGE = """สวัสดีค่ะ ดิฉันน้องแพลน
+ผู้ช่วยของคุณพยัตค่ะ 😊
+
+วันนี้เราจะคุยกันเพื่อเก็บข้อมูลสำคัญของครอบครัวคุณ
+
+คุณพยัตจะนำข้อมูลที่เราคุยกันวันนี้ ไปจัดทำแผน
+ที่คุ้มครองคู่ชีวิตและลูกๆของคุณให้รอบด้าน
+
+ขอทราบชื่อเล่นของคุณหน่อยได้ไหมคะ?"""
 
 app = FastAPI()
 
@@ -189,6 +199,21 @@ async def webhook(request: Request):
         raise HTTPException(status_code=400, detail="Invalid signature")
     return {"status": "ok"}
 
+@handler.add(FollowEvent)
+def handle_follow(event: FollowEvent):
+    user_id = event.source.user_id
+    clear_session(user_id)  # เคลียร์ session เผื่อเคย reset แล้วแอดใหม่
+    try:
+        with ApiClient(configuration) as api_client:
+            line_bot_api = MessagingApi(api_client)
+            line_bot_api.reply_message(
+                ReplyMessageRequest(
+                    reply_token=event.reply_token,
+                    messages=[TextMessage(text=GREETING_MESSAGE)],
+                )
+            )
+    except Exception as e:
+        print(f"❌ Follow reply error: {e}")
 
 def reply_to_line(event, text: str):
     try:
