@@ -11,6 +11,8 @@ from docx import Document
 from docx.shared import Pt, RGBColor, Inches
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
+MODEL = "claude-sonnet-4-5-20251001"
+
 FONT  = "Cordia New"
 SZ    = 16
 SZ_H  = 18
@@ -18,7 +20,6 @@ SZ_T  = 24
 BLACK = RGBColor(0x00, 0x00, 0x00)
 GRAY  = RGBColor(0x66, 0x66, 0x66)
 RED   = RGBColor(0xAA, 0x00, 0x00)
-MODEL = "claude-sonnet-4-20250514"
 FONT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fonts")
 
 _NA = {'ยังไม่มี', '-', 'ยังไม่ได้กำหนด', 'ไม่ได้ระบุ', 'ไม่มี', ''}
