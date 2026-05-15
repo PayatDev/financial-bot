@@ -12,6 +12,8 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
 
+MODEL = "claude-sonnet-4-5-20251001"
+
 FONT     = "Cordia New"
 BLACK    = RGBColor(0x00, 0x00, 0x00)
 GRAY     = RGBColor(0x88, 0x88, 0x88)
@@ -178,7 +180,7 @@ def choose_intent(client_data: dict) -> str:
     if not lw: return "B"
     client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
     r = client.messages.create(
-        model="claude-sonnet-4-20250514", max_tokens=10,
+        model=Model, max_tokens=10,
         messages=[{"role": "user", "content":
             f'ตอบแค่ A หรือ B\nA=ไม่ยื้อชีวิต B=ยื้อชีวิตหรือไม่ชัดเจน\n"{lw}"\nตอบ:'}]
     )
