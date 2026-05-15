@@ -16,6 +16,8 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
 
+MODEL = "claude-sonnet-4-5-20251001" 
+
 FONT = "Cordia New"
 NAVY_RGB = RGBColor(0x1A, 0x3A, 0x5C)
 DARK_RGB = RGBColor(0x22, 0x22, 0x22)
@@ -484,7 +486,7 @@ output เป็น JSON object เดียว ไม่มีข้อคว�
 """
 
     response = client.messages.create(
-        model="claude-sonnet-4-20250514", 
+        model=MODEL, 
         max_tokens=9000,
         messages=[{"role": "user", "content": prompt}]
     )
@@ -508,7 +510,7 @@ output เป็น JSON object เดียว ไม่มีข้อคว�
 {json.dumps(parsed, ensure_ascii=False)}"""
 
     proof_resp = client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model=MODEL,
         max_tokens=9000,
         messages=[{"role": "user", "content": proof_prompt}]
     )
