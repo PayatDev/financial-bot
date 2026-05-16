@@ -52,7 +52,7 @@ handler = WebhookHandler(LINE_CHANNEL_SECRET)
 
 RESET_COMMANDS = ["/reset", "reset", "/เริ่มใหม่", "เริ่มใหม่"]
 
-MAX_TURNS = 100  # ป้องกันค่าใช้จ่ายบาน
+MAX_TURNS = 120  # ป้องกันค่าใช้จ่ายบาน
 
 # เก็บสถานะ completed ใน memory + session store
 # key = user_id, value = True
