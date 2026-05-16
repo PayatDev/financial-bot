@@ -293,6 +293,11 @@ def handle_message(event: MessageEvent):
         reply_to_line(event, "ล้างข้อมูลเรียบร้อยแล้วค่ะ พิมพ์อะไรก็ได้เพื่อเริ่มบทสนทนาใหม่ 😊")
         return
 
+    # สถานะที่ 2: save เสร็จแล้ว — ไม่เรียก Claude
+    if is_completed(user_id):
+        reply_to_line(event, CONTACT_MESSAGE)
+        return
+
     if "@" in user_message and "." in user_message:
         reply_to_line(event, 
             "ได้รับ email แล้วค่ะ 😊\n"
@@ -304,11 +309,6 @@ def handle_message(event: MessageEvent):
             args=(user_id, history, user_message),
             daemon=True
         ).start()
-        return
-
-    # สถานะที่ 2: save เสร็จแล้ว — ไม่เรียก Claude
-    if is_completed(user_id):
-        reply_to_line(event, CONTACT_MESSAGE)
         return
 
     # สถานะที่ 1: กำลังสัมภาษณ์อยู่
