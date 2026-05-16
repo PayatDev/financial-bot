@@ -5,7 +5,7 @@ import anthropic
 from config import ANTHROPIC_API_KEY
 
 client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
-MODEL = "claude-sonnet-4-5-20251001" 
+MODEL = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-5-20250929")
 
 SYSTEM_PROMPT = """คุณคือ "น้องแพลน" ผู้ช่วยของคุณพยัต จิรสุวรรณพงศ์ นักวางแผนการเงิน
  
