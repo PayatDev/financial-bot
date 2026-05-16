@@ -15,7 +15,7 @@ from nong_doc import run as doc_run
 DEV_MODE = True
 SHEET_ID  = os.environ.get("GOOGLE_SHEET_ID")
 SCOPES    = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
-MODEL = "claude-sonnet-4-5-20251001" 
+MODEL = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-5-20250929")
 
 NAVY  = "1E3A5F"
 MGRY  = "E8ECF0"
