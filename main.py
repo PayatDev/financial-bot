@@ -52,15 +52,15 @@ handler = WebhookHandler(LINE_CHANNEL_SECRET)
 
 RESET_COMMANDS = ["/reset", "reset", "/เริ่มใหม่", "เริ่มใหม่"]
 
-MAX_TURNS = 80  # ป้องกันค่าใช้จ่ายบาน
+MAX_TURNS = 100  # ป้องกันค่าใช้จ่ายบาน
 
 # เก็บสถานะ completed ใน memory + session store
 # key = user_id, value = True
 COMPLETED_USERS: dict = {}
 
 CONTACT_MESSAGE = (
-    "น้องแพลนมีหน้าที่เก็บข้อมูลเพียงอย่างเดียวครับ\n"
-    "หากมีอะไรสอบถามเพิ่มเติม ติดต่อคุณพยัตได้เลยนะครับ 😊\n\n"
+    "ดิฉันมีหน้าที่เก็บข้อมูลเพียงอย่างเดียวค่ะ\n"
+    "หากมีอะไรสอบถามเพิ่มเติม ติดต่อคุณพยัตได้เลยนะค่ะ 😊\n\n"
     "📧 Email: payat.jira@gmail.com"
 )
 
@@ -252,14 +252,14 @@ def handle_message(event: MessageEvent):
     if user_message.strip().startswith("/doc "):
         folder_name = user_message.strip()[5:].strip()
         threading.Thread(target=doc_run, args=(folder_name,), daemon=True).start()
-        reply_to_line(event, f"รับทราบครับ กำลังสร้างเอกสารสำหรับ {folder_name}\nรอสักครู่ แล้วจะแจ้งกลับครับ 📄")
+        reply_to_line(event, f"รับทราบค่ะ กำลังสร้างเอกสารสำหรับ {folder_name}\nรอสักครู่ แล้วจะแจ้งกลับค่ะ 📄")
         return
 
     # reset command
     if user_message.strip().lower() in RESET_COMMANDS:
         clear_session(user_id)
         COMPLETED_USERS.pop(user_id, None)
-        reply_to_line(event, "ล้างข้อมูลเรียบร้อยแล้วครับ พิมพ์อะไรก็ได้เพื่อเริ่มบทสนทนาใหม่ 😊")
+        reply_to_line(event, "ล้างข้อมูลเรียบร้อยแล้วค่ะ พิมพ์อะไรก็ได้เพื่อเริ่มบทสนทนาใหม่ 😊")
         return
 
     # สถานะที่ 2: save เสร็จแล้ว — ไม่เรียก Claude
@@ -272,8 +272,8 @@ def handle_message(event: MessageEvent):
 
     if len(history) >= MAX_TURNS * 2:
         reply_to_line(event,
-            "ขออภัยครับ ผมขออนุญาตจบการสนทนานี้นะครับ\n"
-            "กรุณาติดต่อคุณพยัตโดยตรงนะครับ 😊\n\n"
+            "ขออภัยค่ะ ดิฉันขออนุญาตจบการสนทนานี้นะค่ะ\n"
+            "กรุณาติดต่อคุณพยัตนะค่ะ 😊\n\n"
             "📧 payat.jira@gmail.com"
         )
         return
@@ -282,7 +282,7 @@ def handle_message(event: MessageEvent):
         bot_reply = chat(user_id, history, user_message)
     except Exception as e:
         print(f"❌ Claude API error: {e}")
-        reply_to_line(event, "ขออภัยครับ ระบบขัดข้องชั่วคราว กรุณาลองใหม่อีกครั้งในอีกสักครู่นะครับ 🙏")
+        reply_to_line(event, "ขออภัยค่ะ ระบบขัดข้องชั่วคราว กรุณาลองใหม่อีกครั้งในอีกสักครู่นะค่ะ 🙏")
         return
 
     # เช็ค SAVE_DATA
@@ -345,7 +345,7 @@ def handle_message(event: MessageEvent):
         except Exception as e:
             print(f"❌ JSON parse error: {e}")
             print(f"RAW SAVE_DATA:\n{raw}")
-            reply_text = "ขออภัยครับ ระบบบันทึกข้อมูลมีปัญหา กรุณาลองใหม่อีกครั้งนะครับ 🙏"
+            reply_text = "ขออภัยค่ะ ระบบบันทึกข้อมูลมีปัญหา กรุณาลองใหม่อีกครั้งนะค่ะ 🙏"
 
             update_history(user_id, "user", user_message)
             update_history(user_id, "assistant", bot_reply)
