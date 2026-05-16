@@ -54,6 +54,37 @@ RESET_COMMANDS = ["/reset", "reset", "/เริ่มใหม่", "เริ�
 
 MAX_TURNS = 120  # ป้องกันค่าใช้จ่ายบาน
 
+EXPECTED_FIELDS = [
+                    "email", "nickname", "age", "gender", "occupation",
+                    "health", "income_self", "hobbies_and_risks",
+                    "spouse_nickname", "spouse_age", "spouse_occupation",
+                    "spouse_income", "spouse_health", "spouse_status",
+                    "children", "children_outside_marriage",
+                    "guardian_primary", "guardian_backup",
+                    "money_guardian_primary", "money_guardian_backup",
+                    "estate_executor", "urgent_manager",
+                    "asset_distribution", "surviving_spouse_plan",
+                    "debt_responsibility", "business_succession",
+                    "living_will", "financial_poa",
+                    "assets_cash", "assets_property", "assets_business",
+                    "assets_investment", "assets_insurance_savings",
+                    "insurance_life", "insurance_health", "insurance_group",
+                    "welfare", "assets_crypto_wallet", "assets_digital",
+                    "assets_valuables", "debt", "guarantor",
+                    "emergency_cash_90days", "estate_admin_cost",
+                    "funeral_wishes", "documents_location",
+                    "fullname_self", "id_self", "address_self",
+                    "fullname_spouse", "id_spouse",
+                    "fullname_children",
+                    "fullname_executor", "id_executor",
+                    "fullname_executor_backup", "id_executor_backup",
+                    "fullname_guardian_primary", "id_guardian_primary",
+                    "fullname_guardian_backup", "id_guardian_backup",
+                    "fullname_money_guardian_primary", "id_money_guardian_primary",
+                    "fullname_money_guardian_backup", "id_money_guardian_backup",
+                    "gaps_for_payat", "summary",
+                    ]
+
 # เก็บสถานะ completed ใน memory + session store
 # key = user_id, value = True
 COMPLETED_USERS: dict = {}
@@ -311,37 +342,6 @@ def handle_message(event: MessageEvent):
             # ✅ กันพัง
             if not isinstance(data, dict):
                 raise ValueError("SAVE_DATA is not dict")
-
-            EXPECTED_FIELDS = [
-                                "email", "nickname", "age", "gender", "occupation",
-                                "health", "income_self", "hobbies_and_risks",
-                                "spouse_nickname", "spouse_age", "spouse_occupation",
-                                "spouse_income", "spouse_health", "spouse_status",
-                                "children", "children_outside_marriage",
-                                "guardian_primary", "guardian_backup",
-                                "money_guardian_primary", "money_guardian_backup",
-                                "estate_executor", "urgent_manager",
-                                "asset_distribution", "surviving_spouse_plan",
-                                "debt_responsibility", "business_succession",
-                                "living_will", "financial_poa",
-                                "assets_cash", "assets_property", "assets_business",
-                                "assets_investment", "assets_insurance_savings",
-                                "insurance_life", "insurance_health", "insurance_group",
-                                "welfare", "assets_crypto_wallet", "assets_digital",
-                                "assets_valuables", "debt", "guarantor",
-                                "emergency_cash_90days", "estate_admin_cost",
-                                "funeral_wishes", "documents_location",
-                                "fullname_self", "id_self", "address_self",
-                                "fullname_spouse", "id_spouse",
-                                "fullname_children",
-                                "fullname_executor", "id_executor",
-                                "fullname_executor_backup", "id_executor_backup",
-                                "fullname_guardian_primary", "id_guardian_primary",
-                                "fullname_guardian_backup", "id_guardian_backup",
-                                "fullname_money_guardian_primary", "id_money_guardian_primary",
-                                "fullname_money_guardian_backup", "id_money_guardian_backup",
-                                "gaps_for_payat", "summary",
-                                ]
 
             data = {k: data.get(k, "ไม่ได้ระบุ") for k in EXPECTED_FIELDS}
 
