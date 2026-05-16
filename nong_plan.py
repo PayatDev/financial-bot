@@ -4,6 +4,8 @@
 import anthropic
 from config import ANTHROPIC_API_KEY
 
+import os
+
 client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 MODEL = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-5-20250929")
 
