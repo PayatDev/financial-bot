@@ -262,6 +262,19 @@ def handle_message(event: MessageEvent):
         reply_to_line(event, "ล้างข้อมูลเรียบร้อยแล้วค่ะ พิมพ์อะไรก็ได้เพื่อเริ่มบทสนทนาใหม่ 😊")
         return
 
+    if "@" in user_message and "." in user_message:
+        reply_to_line(event, 
+            "ได้รับ email แล้วค่ะ 😊\n"
+            "กำลังบันทึกข้อมูล คุณพยัตจะส่งเอกสารให้เร็วๆ นี้นะคะ"
+        )
+        history = get_history(user_id)
+        threading.Thread(
+            target=process_save,
+            args=(user_id, history, user_message),
+            daemon=True
+        ).start()
+        return
+
     # สถานะที่ 2: save เสร็จแล้ว — ไม่เรียก Claude
     if is_completed(user_id):
         reply_to_line(event, CONTACT_MESSAGE)
@@ -355,3 +368,20 @@ def handle_message(event: MessageEvent):
         update_history(user_id, "assistant", bot_reply)
 
     reply_to_line(event, reply_text)
+
+
+def process_save(user_id, history, user_message):
+    try:
+        bot_reply = chat(user_id, history, user_message)
+        if "[SAVE_DATA]" in bot_reply and "[END_SAVE_DATA]" in bot_reply:
+            raw = bot_reply.split("[SAVE_DATA]")[1].split("[END_SAVE_DATA]")[0].strip()
+            raw = raw.replace("```json", "").replace("```", "").strip()
+            data = json.loads(raw)
+            data = {k: data.get(k, "ไม่ได้ระบุ") for k in EXPECTED_FIELDS}
+            save_to_sheets(user_id, data)
+            threading.Thread(target=draft_run, args=(data,), daemon=True).start()
+            COMPLETED_USERS[user_id] = True
+            update_history(user_id, "user", user_message)
+            update_history(user_id, "assistant", "[COMPLETED]")
+    except Exception as e:
+        print(f"❌ process_save error: {e}")
