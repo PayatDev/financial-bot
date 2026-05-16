@@ -16,7 +16,7 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
 
-MODEL = "claude-sonnet-4-5-20251001" 
+MODEL = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-5-20250929")
 
 FONT = "Cordia New"
 NAVY_RGB = RGBColor(0x1A, 0x3A, 0x5C)
