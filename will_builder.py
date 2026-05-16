@@ -11,7 +11,7 @@ from docx import Document
 from docx.shared import Pt, RGBColor, Inches
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
-MODEL = "claude-sonnet-4-5-20251001"
+MODEL = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-5-20250929")
 
 FONT  = "Cordia New"
 SZ    = 16
