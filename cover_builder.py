@@ -491,7 +491,7 @@ output เป็น JSON object เดียว ไม่มีข้อคว�
         messages=[{"role": "user", "content": prompt}]
     )
     text = response.content[0].text.replace("```json", "").replace("```", "").strip()
-    print(f"DEBUG cover[:200]: {text[:200]}")
+    print(f"DEBUG cover_all: {text}")
     start = text.find("{"); end = text.rfind("}") + 1
     if start == -1 or end == 0: raise ValueError("ไม่พบ JSON")
     parsed = _extract_json(text)
