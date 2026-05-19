@@ -16,7 +16,7 @@ from email_service import send_line_message
 
 from cover_builder import generate_issue_content, build_cover
 from will_builder import build_will
-from poa_builder import build_poa
+from asset_registry_builder import build_asset_registry
 from living_will_builder import build_living_will
 from emergency_guide_builder import build_emergency_guide
 
@@ -94,10 +94,10 @@ def run(folder_name: str, folder_id: str = None):
     upload_file_to_folder(will_path, will_filename, folder_id)
     if os.path.exists(will_path): os.unlink(will_path)
 
-    poa_path = build_poa(client_data)
-    poa_filename = f"3_หนังสือมอบอำนาจ_คุณ{nickname}.docx"
-    upload_file_to_folder(poa_path, poa_filename, folder_id)
-    if os.path.exists(poa_path): os.unlink(poa_path)
+    asset_path = build_asset_registry(client_data)
+    asset_filename = f"3_บัญชีทรัพย์สิน_คุณ{nickname}.docx"
+    upload_file_to_folder(asset_path, asset_filename, folder_id)
+    if os.path.exists(asset_path): os.unlink(asset_path)
 
     lw_path = build_living_will(client_data)
     lw_filename = f"4_หนังสือแสดงเจตนาการยื้อชีวิต_คุณ{nickname}.docx"
