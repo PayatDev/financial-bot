@@ -32,6 +32,7 @@ from drive_service import upload_file_to_folder
  
 from cover_builder import generate_issue_content, build_cover
 from will_builder import build_will
+from asset_registry_builder import build_asset_registry
 from living_will_builder import build_living_will
 from emergency_guide_builder import build_emergency_guide
 
@@ -216,6 +217,20 @@ def _run_guide(folder: str):
 @app.get("/test-guide")
 def test_guide(folder: str):
     threading.Thread(target=_run_guide, args=(folder,), daemon=True).start()
+    return {"status": "started", "folder": folder}
+
+def _run_asset(folder: str):
+    folder_id, client_data = _load_client_data(folder)
+    nickname = client_data.get("ชื่อเล่น", folder.split("_")[0])
+    path = build_asset_registry(client_data)
+    filename = f"3_บัญชีทรัพย์สิน_คุณ{nickname}.docx"
+    upload_file_to_folder(path, filename, folder_id)
+    import os; os.path.exists(path) and os.unlink(path)
+    print(f"✅ asset registry พร้อม → {filename}")
+
+@app.get("/test-asset")
+def test_asset(folder: str):
+    threading.Thread(target=_run_asset, args=(folder,), daemon=True).start()
     return {"status": "started", "folder": folder}
 
 @app.get("/run-doc")
