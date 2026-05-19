@@ -487,7 +487,7 @@ output เป็น JSON object เดียว ไม่มีข้อคว�
 
     response = client.messages.create(
         model=MODEL, 
-        max_tokens=9000,
+        max_tokens=16000,
         messages=[{"role": "user", "content": prompt}]
     )
     text = response.content[0].text.replace("```json", "").replace("```", "").strip()
