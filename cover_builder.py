@@ -24,6 +24,8 @@ LIGHT_BLUE_HEX = "EBF2FA"
 NAVY_HEX       = "1A3A5C"
 YELLOW_HEX     = "FFFBEA"
 
+MODEL = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-5-20250929")
+
 # ─────────────────────────────────────────────────────────────────────
 # FIXED CONTENT
 # ─────────────────────────────────────────────────────────────────────
