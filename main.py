@@ -26,6 +26,15 @@ from nong_doc import run as doc_run
 from order_service import save_order
 from pydantic import BaseModel
 
+from nong_draft import run as draft_run
+from nong_doc import find_folder_id, download_xlsx, read_xlsx
+from drive_service import upload_file_to_folder
+ 
+from cover_builder import generate_issue_content, build_cover
+from will_builder import build_will
+from living_will_builder import build_living_will
+from emergency_guide_builder import build_emergency_guide
+
 import threading
 
 GREETING_MESSAGE = """สวัสดีค่ะ ดิฉันน้องแพลน
@@ -126,10 +135,88 @@ def test_drive():
     files = results.get("files", [])
     return {"files": files, "count": len(files)}
 
+# ── /test-draft → xlsx เท่านั้น ───────────────────────────────────────
 @app.get("/test-draft")
 def test_draft():
-    threading.Thread(target=draft_run, daemon=True).start()
-    return {"status": "started — ดู log ใน Railway"}
+    threading.Thread(
+        target=draft_run, kwargs={"run_doc": False}, daemon=True
+    ).start()
+    return {"status": "started — xlsx only"}
+ 
+ 
+# ── helper: โหลด client_data จาก folder ──────────────────────────────
+def _load_client_data(folder: str) -> tuple:
+    folder_id   = find_folder_id(folder)
+    xlsx_path   = download_xlsx(folder_id)
+    client_data = read_xlsx(xlsx_path)
+    import os; os.unlink(xlsx_path)
+    return folder_id, client_data
+ 
+ 
+# ── /test-cover?folder=xxx ────────────────────────────────────────────
+def _run_cover(folder: str):
+    folder_id, client_data = _load_client_data(folder)
+    nickname  = client_data.get("ชื่อเล่น", folder.split("_")[0])
+    print("กำลัง generate cover...")
+    generated = generate_issue_content(client_data)
+    path = build_cover(client_data, [], generated, folder)
+    filename = f"1_แผนครอบครัว_คุณ{nickname}.docx"
+    upload_file_to_folder(path, filename, folder_id)
+    import os; os.path.exists(path) and os.unlink(path)
+    print(f"✅ cover พร้อม → {filename}")
+ 
+@app.get("/test-cover")
+def test_cover(folder: str):
+    threading.Thread(target=_run_cover, args=(folder,), daemon=True).start()
+    return {"status": "started", "folder": folder}
+ 
+ 
+# ── /test-will?folder=xxx ─────────────────────────────────────────────
+def _run_will(folder: str):
+    folder_id, client_data = _load_client_data(folder)
+    nickname = client_data.get("ชื่อเล่น", folder.split("_")[0])
+    path = build_will(client_data)
+    filename = f"2_พินัยกรรม_คุณ{nickname}.docx"
+    upload_file_to_folder(path, filename, folder_id)
+    import os; os.path.exists(path) and os.unlink(path)
+    print(f"✅ will พร้อม → {filename}")
+ 
+@app.get("/test-will")
+def test_will(folder: str):
+    threading.Thread(target=_run_will, args=(folder,), daemon=True).start()
+    return {"status": "started", "folder": folder}
+ 
+ 
+# ── /test-living?folder=xxx ───────────────────────────────────────────
+def _run_living(folder: str):
+    folder_id, client_data = _load_client_data(folder)
+    nickname = client_data.get("ชื่อเล่น", folder.split("_")[0])
+    path = build_living_will(client_data)
+    filename = f"4_หนังสือแสดงเจตนาการยื้อชีวิต_คุณ{nickname}.docx"
+    upload_file_to_folder(path, filename, folder_id)
+    import os; os.path.exists(path) and os.unlink(path)
+    print(f"✅ living will พร้อม → {filename}")
+ 
+@app.get("/test-living")
+def test_living(folder: str):
+    threading.Thread(target=_run_living, args=(folder,), daemon=True).start()
+    return {"status": "started", "folder": folder}
+ 
+ 
+# ── /test-guide?folder=xxx ────────────────────────────────────────────
+def _run_guide(folder: str):
+    folder_id, client_data = _load_client_data(folder)
+    nickname = client_data.get("ชื่อเล่น", folder.split("_")[0])
+    path = build_emergency_guide(client_data)
+    filename = f"5_คู่มือฉุกเฉิน_คุณ{nickname}.docx"
+    upload_file_to_folder(path, filename, folder_id)
+    import os; os.path.exists(path) and os.unlink(path)
+    print(f"✅ guide พร้อม → {filename}")
+ 
+@app.get("/test-guide")
+def test_guide(folder: str):
+    threading.Thread(target=_run_guide, args=(folder,), daemon=True).start()
+    return {"status": "started", "folder": folder}
 
 @app.get("/run-doc")
 def run_doc(folder: str):
