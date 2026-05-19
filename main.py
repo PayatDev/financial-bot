@@ -140,7 +140,7 @@ def test_drive():
 @app.get("/test-draft")
 def test_draft():
     threading.Thread(
-        target=draft_run, kwargs={"run_doc": False}, daemon=True
+        target=draft_run, kwargs={"run_doc": True}, daemon=True
     ).start()
     return {"status": "started — xlsx only"}
  
