@@ -180,7 +180,7 @@ def choose_intent(client_data: dict) -> str:
     if not lw: return "B"
     client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
     r = client.messages.create(
-        model=Model, max_tokens=10,
+        model=MODEL, max_tokens=10,
         messages=[{"role": "user", "content":
             f'ตอบแค่ A หรือ B\nA=ไม่ยื้อชีวิต B=ยื้อชีวิตหรือไม่ชัดเจน\n"{lw}"\nตอบ:'}]
     )
